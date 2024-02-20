@@ -1,15 +1,17 @@
 package main.java.nn.layers;
 
 import main.java.autograd.Value;
+import main.java.mathematics.IMultiDimObject;
 import main.java.mathematics.Tensor;
 import main.java.mathematics.Matrix;
+import main.java.nn.models.IModel;
 
-public class Convolution2D {
+public class Convolution2D implements ILayer {
     private int stride_;
     private int padding_;
-    private boolean bias_;
     private String padding_mode_;
     private Tensor[] kernels;
+    private Matrix bias_;
 
     public Convolution2D(int in_channels, int out_channels, int kernel_size, int stride,
                          int padding, boolean bias, String padding_mode) {
@@ -17,57 +19,22 @@ public class Convolution2D {
         if (stride < 1) throw new RuntimeException("Stride must be at least 1");
         stride_= stride;
         padding_ = padding;
-        bias_ = bias;
+        bias_ = bias ? new Matrix(in_channels, 1, IMultiDimObject.InitValues.ZEROS) : null;
         padding_mode_ = padding_mode;
 
         kernels = new Tensor[out_channels];
         for (int i = 0; i < out_channels; ++i)
-            kernels[i] = new Tensor(kernel_size, kernel_size, in_channels);
+            kernels[i] = new Tensor(kernel_size, kernel_size, in_channels, Tensor.InitValues.RANDOM);
     }
 
-    public Tensor convolve(Tensor tensor) {
+    public Tensor forward(IMultiDimObject tensor) {
         Matrix[] matrices = new Matrix[kernels.length];
+        Tensor casted_tensor = (Tensor) tensor;
         for (int i = 0; i < kernels.length; ++i)
-            matrices[i] = convolve(tensor, kernels[i]);
+            matrices[i] = LayerFunctions.convolve2D(casted_tensor, kernels[i], padding_, stride_);
 
-        return new Tensor(matrices);
-    }
-    private Matrix convolve(Tensor tensor, Tensor kernel) {
-        if (tensor == null)
-            throw new NullPointerException("Attempt to convolve null tensor");
-
-        int[] tensor_size = tensor.get_size();
-        int[] kernel_size = kernel.get_size();
-
-        if (!check_sizes(tensor.get_size(), kernel))
-            throw new ArrayIndexOutOfBoundsException("Input tensor has incorrect size");
-
-        int output_height = (tensor_size[0] + 2 * padding_ - kernel_size[0]) / stride_ + 1;
-        int output_width = (tensor_size[1] + 2 * padding_ - kernel_size[1]) / stride_ + 1;
-        var output_matrix = new Matrix(output_height, output_width);
-
-        for (int i = 0; i < output_height; ++i) {
-            for (int j = 0; j < output_width; ++j) {
-                Tensor sliced_tensor = tensor.slice(
-                        new int[] {i * stride_, kernel_size[0] + i * stride_},
-                        new int[] {j * stride_, kernel_size[1] + j * stride_}
-                );
-                output_matrix.set(new int[] {i, j}, kernel.pw_multiply(sliced_tensor).sum());
-            }
-        }
-
-        return output_matrix;
-    }
-
-    public void backward() {
-
-    }
-
-    private boolean check_sizes(int[] tensor_size, Tensor kernel) {
-        int[] kernel_size = kernel.get_size();
-        return tensor_size[2] == kernel_size[2] &&
-                tensor_size[0] >= kernel_size[0] &&
-                tensor_size[1] >= kernel_size[1];
+        var result = new Tensor(matrices);
+        return bias_ == null ? result : result.add_vector(bias_);
     }
 }
 

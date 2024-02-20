@@ -1,2 +1,4 @@
-package main.java.nn.layers;public class TransposedConvolution2D {
+package main.java.nn.layers;
+
+public class TransposedConvolution2D {
 }

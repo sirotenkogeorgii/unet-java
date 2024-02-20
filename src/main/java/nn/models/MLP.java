@@ -1,6 +1,7 @@
 package main.java.nn.models;
 
 import main.java.autograd.Value;
+import main.java.mathematics.IMultiDimObject;
 import main.java.mathematics.Matrix;
 import main.java.nn.layers.LinearLayer;
 import main.java.optimizers.IOptimizer;
@@ -8,7 +9,7 @@ import main.java.optimizers.SGD;
 
 import java.util.ArrayList;
 
-    public class MLP implements IModel {
+public class MLP implements IModel {
     private ArrayList<LinearLayer> layers_;
 
     public MLP(ArrayList<LinearLayer> layers) {
@@ -54,7 +55,7 @@ class Program {
         layers.add(new LinearLayer(10, 10, true, "relu"));
 //        layers.add(new LinearLayer(10, 10, false, "identity"));
 
-        var input_vector = new Matrix(10, 1);
+        var input_vector = new Matrix(10, 1, IMultiDimObject.InitValues.RANDOM);
         var target_vector = new Matrix(new double[][] {{1, 1, 1, 1, 1, 0, 0, 0, 0, 0}}).transpose();
 
         var mlp = new MLP(layers);
