@@ -1,10 +1,12 @@
 package main.java.mathematics;
 
 import main.java.autograd.Value;
+
+import java.util.Iterator;
 import java.util.Random;
 
 public class Matrix implements IMultiDimObject {
-    private Value[][] values_;
+    private final Value[][] values_;
     private int[] size_;
 
     public Matrix(int height, int width, InitValues init_values) {
@@ -15,7 +17,7 @@ public class Matrix implements IMultiDimObject {
         var random = new Random();
         for (int i = 0; i < height; ++i) {
             for (int j = 0; j < width; ++j) {
-                double current_value = switch (init_values) { case ZEROS -> 0; case RANDOM -> random.nextGaussian(0, 1); default -> throw new RuntimeException("Unknown value to fill"); };
+                double current_value = switch (init_values) { case ZEROS -> 0; case RANDOM -> random.nextDouble(-0.25, 0.25); default -> throw new RuntimeException("Unknown value to fill"); };
                 values_[i][j] = new Value(current_value);
             }
         }
@@ -163,7 +165,26 @@ public class Matrix implements IMultiDimObject {
         return new Matrix(matrix_array);
     }
 
+    public Iterator<Value> iterator() {
+        return new Iterator<Value>() {
+            int current_index = 0;
+            int values_num = size_[0] * size_[1];
+            @Override
+            public boolean hasNext() {
+                return current_index != values_num;
+            }
+
+            @Override
+            public Value next() {
+                var value = values_[current_index / size_[1]][current_index % size_[1]];
+                current_index++;
+                return value;
+            }
+        };
+    }
+
     public void print() {
+        System.out.printf("size_ = [%d, %d]\n", size_[0], size_[1]);
         for (int i = 0; i < size_[0]; ++i) {
             System.out.println();
             for (int j = 0; j < size_[1]; ++j) {

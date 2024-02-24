@@ -2,8 +2,6 @@ package main.java.nn.layers;
 
 import main.java.mathematics.IMultiDimObject;
 import main.java.mathematics.Matrix;
-import main.java.autograd.Value;
-import main.java.nn.models.IModel;
 
 import java.util.ArrayList;
 
@@ -30,8 +28,8 @@ public class LinearLayer implements ILayer {
         };
     }
 
-    public ArrayList<Matrix> get_parameters() {
-        var parameters = new ArrayList<Matrix>();
+    public ArrayList<IMultiDimObject> get_parameters() {
+        var parameters = new ArrayList<IMultiDimObject>();
         parameters.add(weights_);
         if (bias_ != null) parameters.add(bias_);
         return parameters;

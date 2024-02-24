@@ -4,6 +4,7 @@ import jdk.jshell.spi.ExecutionControl;
 import main.java.autograd.Value;
 import main.java.nn.layers.ILayer;
 
+import java.util.Iterator;
 import java.util.Random;
 
 public class Tensor implements IMultiDimObject {
@@ -20,7 +21,7 @@ public class Tensor implements IMultiDimObject {
         for (int i = 0; i < height; ++i) {
             for (int j = 0; j < width; ++j) {
                 for (int k = 0; k < depth; ++k) {
-                    double current_value = switch (init_values) { case ZEROS -> 0; case RANDOM -> random.nextGaussian(0, 1); default -> throw new RuntimeException("Unknown value to fill"); };
+                    double current_value = switch (init_values) { case ZEROS -> 0; case RANDOM -> random.nextDouble(-0.25, 0.25); default -> throw new RuntimeException("Unknown value to fill"); };
                     values_[i][j][k] = new Value(current_value);
                 }
             }
@@ -82,10 +83,10 @@ public class Tensor implements IMultiDimObject {
         int new_height = x[1] - x[0];
         int new_width = y[1] - y[0];
         var view_tensor = new Tensor(new_height, new_width, size_[2], InitValues.ZEROS);
-        for (int i = 0; i < new_height; ++i) {
-            for (int j = 0; j < new_width; ++j) {
-                for (int k = 0; k < size_[2]; ++k)
-                    view_tensor.values_[i][j][k] = values_[i][j][k];
+        for (int i = x[0]; i < x[1]; ++i) {
+            for (int j = y[0]; j < y[1]; ++j) {
+                if (size_[2] >= 0)
+                    System.arraycopy(values_[i][j], 0, view_tensor.values_[i - x[0]][j - y[0]], 0, size_[2]);
             }
         }
         return view_tensor;
@@ -138,7 +139,10 @@ public class Tensor implements IMultiDimObject {
         if (!vector.is_vector()) throw new RuntimeException("Input is not a vector");
 
         int[] vector_size = vector.get_size();
-        if (vector_size[0] != size_[2]) throw new RuntimeException("Vector has invalid size to be added");
+        if (vector_size[0] != size_[2]) {
+            System.out.printf("ERROR: %d != %d\n", vector_size[0], size_[2]);
+            throw new RuntimeException("Vector has invalid size to be added");
+        }
 
         var tensor_array = new Value[size_[0]][size_[1]][size_[2]];
         for (int i = 0; i < size_[0]; ++i) {
@@ -244,13 +248,81 @@ public class Tensor implements IMultiDimObject {
         }
     }
 
+    public Matrix get_dim(int dim) {
+        if (dim < 0 || dim >= size_[2]) throw new RuntimeException("Attempt to get out of bounds dimension");
+
+        var matrix_array = new Value[size_[0]][size_[1]];
+        for (int i = 0; i < size_[0]; ++i) {
+            for (int j = 0; j < size_[1]; ++j)
+                matrix_array[i][j] = values_[i][j][dim];
+        }
+
+        return new Matrix(matrix_array);
+    }
+
+    public Tensor concatenate(Tensor other) {
+        if (other == null) throw new RuntimeException("Attempt to concatenate null tensor");
+        int[] other_size = other.get_size();
+        if (other_size[0] != size_[0] || other_size[1] != size_[1]) throw new RuntimeException("Height and width are not same to concatenate");
+
+        var tensor_array = new Value[size_[0]][size_[1]][size_[2] + other_size[2]];
+        for (int i = 0; i < size_[0]; ++i) {
+            for (int j = 0; j < size_[1]; ++j) {
+                for (int k = 0; k < size_[2]; ++k) {
+                    tensor_array[i][j][k] = values_[i][j][k];
+                }
+            }
+        }
+        for (int i = 0; i < other_size[0]; ++i) {
+            for (int j = 0; j < other_size[1]; ++j) {
+                for (int k = 0; k < other_size[2]; ++k) {
+                    tensor_array[i][j][k + size_[2]] = other.values_[i][j][k];
+                }
+            }
+        }
+
+        return new Tensor(tensor_array);
+    }
+
+    public Tensor relu() {
+        var tensor_array = new Value[size_[0]][size_[1]][size_[2]];
+        for (int i = 0; i < size_[0]; ++i) {
+            for (int j = 0; j < size_[1]; ++j) {
+                for (int k = 0; k < size_[2]; ++k) {
+                    tensor_array[i][j][k] = values_[i][j][k].relu();
+                }
+            }
+        }
+        return new Tensor(tensor_array);
+    }
+
+    public Iterator<Value> iterator() {
+        return new Iterator<Value>() {
+            int current_index = 0;
+            int matrix_size = size_[0] * size_[1];
+            int values_num = size_[0] * size_[1] * size_[2];
+            @Override
+            public boolean hasNext() {
+                return current_index != values_num;
+            }
+
+            @Override
+            public Value next() {
+                var value = values_[(current_index % matrix_size) / size_[1]][(current_index % matrix_size) % size_[1]][current_index / matrix_size];
+                current_index++;
+                return value;
+            }
+        };
+    }
+
     public void print() {
         System.out.printf("size_ = [%d, %d, %d]\n", size_[0], size_[1], size_[2]);
         for (int i = 0; i < size_[0]; ++i) {
             for (int j = 0; j < size_[1]; ++j) {
                 for (int k = 0; k < size_[2]; ++k)
-                    System.out.println(values_[i][j][k].get_gradient());
+                    System.out.printf("%f ", values_[i][j][k].get_value());
             }
+            System.out.println();
         }
     }
 }

@@ -21,6 +21,7 @@ public class Value implements IDifferentiable {
         if (other == null) throw new NullPointerException("Attempt to add null value");
         var new_value = new Value(value_ + other.value_);
         new_value.prop_func_ = () -> {
+//            System.out.println("AAAA");
             gradient_ += new_value.gradient_;
             other.gradient_ += new_value.gradient_;
         };
@@ -41,6 +42,7 @@ public class Value implements IDifferentiable {
         if (other == null) throw new NullPointerException("Attempt to multiply by null value");
         var new_value = new Value(value_ * other.value_);
         new_value.prop_func_ = () -> {
+//            System.out.println("AAAA");
             gradient_ += new_value.gradient_ * other.value_;
             other.gradient_ += new_value.gradient_ * value_;
         };
@@ -53,7 +55,19 @@ public class Value implements IDifferentiable {
     public Value relu() {
         var new_value = new Value(value_ < 0 ? 0 : value_);
         new_value.prop_func_ = () -> {
+//            System.out.println("AAAA");
             gradient_ += new_value.gradient_ * (new_value.value_ > 0 ? 1 : 0);
+        };
+        new_value.parents_.add(this);
+        return new_value;
+    }
+
+    public Value log() {
+        if (value_ == 1) throw new RuntimeException("Attempt to logarithm 1");
+        var new_value = new Value(Math.log(value_));
+        new_value.prop_func_ = () -> {
+//            System.out.println("AAAA");
+            gradient_ += 1 / value_;
         };
         new_value.parents_.add(this);
         return new_value;
@@ -62,6 +76,7 @@ public class Value implements IDifferentiable {
     public Value sigmoid() {
         var new_value = new Value(1 / (1 + Math.exp(-value_)));
         new_value.prop_func_ = () -> {
+//            System.out.println("AAAA");
             gradient_ += new_value.gradient_ * new_value.value_ * (1 - new_value.value_);
         };
         new_value.parents_.add(this);
