@@ -15,11 +15,13 @@ public class SGD extends Optimizer {
     @Override
     public void step() {
         for (IMultiDimObject param: parameters_) {
+            int i = 0;
             for (Value val: param) {
-                System.out.println(val.get_gradient());
-                double new_value = val.get_value() - alpha_ * val.get_gradient();
-                val.set_value(new_value);
+//                System.out.println(val.get_value());
+                val.set_value(val.get_value() - alpha_ * val.get_gradient());
+                i++;
             }
+//            System.out.println(i);
         }
     }
 

@@ -67,7 +67,7 @@ public class Value implements IDifferentiable {
         var new_value = new Value(Math.log(value_));
         new_value.prop_func_ = () -> {
 //            System.out.println("AAAA");
-            gradient_ += 1 / value_;
+            gradient_ += new_value.gradient_ * (1 / value_); // TODO: handle division by zero
         };
         new_value.parents_.add(this);
         return new_value;

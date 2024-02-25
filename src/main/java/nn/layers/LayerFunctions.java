@@ -187,13 +187,6 @@ public class LayerFunctions {
         return current_value;
     }
 
-    public static Value bce_loss(Value input, Value target) {
-        Value temp1 = target.multiply(-1).multiply(input.log());
-        Value temp2 = target.multiply(-1).add(1).multiply(input.multiply(-1).add(1).log());
-//        double loss = -1 * target_value * Math.log(input_value) - (1 - target_value) * Math.log(1 - input_value);
-        return temp1.sub(temp2);
-    }
-
     public static Tensor concatenate(ArrayList<Tensor> tensors) {
         if (tensors == null || tensors.isEmpty()) throw new RuntimeException("Tensor to concatenate is empty or null");
         Tensor current_tensor = tensors.get(0);
@@ -201,65 +194,115 @@ public class LayerFunctions {
             current_tensor = current_tensor.concatenate(tensors.get(i));
         return current_tensor;
     }
+
+    public static Value bce_loss(Matrix matrix1, Matrix matrix2) {
+        Value result = new Value(0);
+        int[] matrix_shape = matrix1.get_size();
+        for (int i = 0; i < matrix_shape[0]; ++i) {
+            for (int j = 0; j < matrix_shape[1]; ++j) {
+                Value temp = bce_value(matrix1.get(i, j), matrix2.get(i, j));
+                result = result.add(temp);
+            }
+        }
+        return  result;
+    }
+
+    private static Value bce_value(Value pred, Value target) {
+        return target.multiply(-1).multiply(pred.log()).sub(         target.multiply(-1).add(1).multiply(        pred.multiply(-1).add(1).log()           )                 );
+    }
 }
 
 class Program {
+    static Value mse(Matrix matrix1, Matrix matrix2) {
+        Value result = new Value(0);
+        int[] matrix_shape = matrix1.get_size();
+        for (int i = 0; i < matrix_shape[0]; ++i) {
+            for (int j = 0; j < matrix_shape[1]; ++j) {
+                Value temp = matrix1.get(i, j).sub(matrix2.get(i, j));
+                result = result.add(temp.multiply(temp));
+            }
+        }
+        return  result;
+    }
+
+    static Value bce_value(Value pred, Value target) {
+        return target.multiply(-1).multiply(pred.log()).sub(         target.multiply(-1).add(1).multiply(        pred.multiply(-1).add(1).log()           )                 );
+    }
+
+    static Value bce_loss(Matrix matrix1, Matrix matrix2) {
+        Value result = new Value(0);
+        int[] matrix_shape = matrix1.get_size();
+        for (int i = 0; i < matrix_shape[0]; ++i) {
+            for (int j = 0; j < matrix_shape[1]; ++j) {
+                Value temp = bce_value(matrix1.get(i, j), matrix2.get(i, j));
+                result = result.add(temp);
+            }
+        }
+        return  result;
+    }
+
     public static void main(String[] args) {
-//        Tensor input_tensor = new Tensor(2, 2, 1, IMultiDimObject.InitValues.RANDOM);
-//        Tensor kernel = new Tensor(3, 3, 1, IMultiDimObject.InitValues.RANDOM);
-//
-//        Matrix output_matrix = LayerFunctions.convolveTransposed2D(input_tensor, kernel, 2, 1);
-//
-//        int[] size = output_matrix.get_size();
-//        System.out.printf("[DEBUG] Size: [%d, %d]", size[0], size[1]);
-//        output_matrix.print();
-
-//        Tensor input_tensor = new Tensor(4, 4, 4, IMultiDimObject.InitValues.RANDOM);
-//        input_tensor.print();
-//        ILayer max_pool = new MaxPool2D(2);
-//        Tensor output_tensor = (Tensor)max_pool.forward(input_tensor);
-//        System.out.println();
-//        output_tensor.print();
-
-        int image_size = 28;
-//        Tensor input_image = new Tensor(image_size, image_size, 3, IMultiDimObject.InitValues.RANDOM);
-//        Tensor input_image = new Tensor(10, 10, 3, IMultiDimObject.InitValues.RANDOM);
-
         var layers = new ArrayList<ILayer>();
+        layers.add(new LinearLayer(10, 1, true, "sigmoid"));
 
-//        layers.add(new Convolution2D(3, 3, 3, 1, 0, true, null, Convolution.Activation.ReLU));
-//        layers.add(new Convolution2D(3, 3, 3, 1, 0, true, null, Convolution.Activation.ReLU));
-//        layers.add(new Convolution2D(3, 3, 3, 1, 0, true, null, Convolution.Activation.ReLU));
-//        layers.add(new Convolution2D(3, 3, 3, 1, 0, true, null, Convolution.Activation.ReLU));
-//        layers.add(new MaxPool2D(2));
-//        layers.add(new Flatten2D());
-        var input_image = new Matrix(5, 1, IMultiDimObject.InitValues.RANDOM);
-        layers.add(new LinearLayer(5, 2, true, "relu"));
-        layers.add(new LinearLayer(2, 1, false, "sigmoid"));
-//        layers.add(new LinearLayer(100, 10, true, "relu"));
-//        layers.add(new LinearLayer(10, 1, true, "sigmoid"));
-//
+        var input_image = new Matrix(10, 1, IMultiDimObject.InitValues.RANDOM);
+        var target = new Matrix(new double[][] {{1}}).transpose();
+
         var model = new Model(layers);
 
-        Optimizer optimizer = new SGD(model.get_parameters(), 0.00001);
-
+        Optimizer optimizer = new SGD(model.get_parameters(), 0.01);
         Loss loss = new BCELoss();
 
-        var target = new Matrix(1, 1, IMultiDimObject.InitValues.ZEROS);
-        target.set(new int[] {0,0}, new Value(1));
 
-        for (int i = 0; i < 10; ++i) {
-            var output_image = model.forward(input_image);
+        for (int i = 0; i < 1000; ++i) {
+            var output = model.forward(input_image);
 
-            loss.calculate_loss(output_image, target);
-//            System.out.println("Ahoj");
+            loss.calculate_loss(output, target);
             loss.backward();
-//            System.out.println("Cau");
 
             optimizer.step();
             optimizer.set_zero_gradients();
-            output_image.print();
+
+            System.out.printf("Loss: %f\n", loss.get_loss().get_value());
+//            ((Matrix)output).transpose().print();
         }
+
+
+
+
+
+//        var layers = new ArrayList<ILayer>();
+//        layers.add(new LinearLayer(10, 10, true, "sigmoid"));
+//
+//        var input_vector = new Matrix(10, 1, IMultiDimObject.InitValues.RANDOM);
+//        var target_vector = new Matrix(new double[][] {{1, 1, 1, 1, 1, 0, 0, 0, 0, 0}}).transpose();
+//
+//        var mlp = new Model(layers);
+//        Optimizer optimizer = new SGD(mlp.get_parameters(), 0.01);
+//
+//        for (int i = 0; i < 1000; ++i) {
+//            Matrix output = (Matrix)mlp.forward(input_vector);
+//
+//            output.transpose().print();
+//
+////            Value mse_value = mse(output, target_vector);
+//            Value mse_value = bce(output, target_vector);
+//
+//            System.out.println();
+//            System.out.println(mse_value.get_value());
+//
+//            mse_value.backward();
+//            optimizer.step();
+//            optimizer.set_zero_gradients();
+//        }
+
+
+
+
+
+
+
+
 
     }
 }

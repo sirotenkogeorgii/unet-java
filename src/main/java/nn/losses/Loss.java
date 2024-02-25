@@ -6,6 +6,7 @@ import main.java.mathematics.Matrix;
 
 public abstract class Loss {
     protected Value loss_value_;
+    public Value get_loss() { return loss_value_; }
     public abstract void calculate_loss(IMultiDimObject input, IMultiDimObject target);
     public abstract void backward();
 }
