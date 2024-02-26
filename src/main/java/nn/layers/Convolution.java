@@ -18,8 +18,7 @@ public abstract class Convolution implements ILayer {
     public abstract Tensor forward(IMultiDimObject tensor);
 
     public ArrayList<IMultiDimObject> get_parameters() {
-        var parameters = new ArrayList<IMultiDimObject>();
-        parameters.addAll(Arrays.asList(kernels_));
+        var parameters = new ArrayList<IMultiDimObject>(Arrays.asList(kernels_));
         if (bias_ != null) parameters.add(bias_);
         return parameters;
     }

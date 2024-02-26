@@ -16,7 +16,7 @@ public class TransposedConvolution2D extends Convolution {
         activation_ = activation == null ? NO : activation;
         kernels_ = new Tensor[out_channels];
         for (int i = 0; i < out_channels; ++i)
-            kernels_[i] = new Tensor(kernel_size, kernel_size, in_channels, Tensor.InitValues.RANDOM);
+            kernels_[i] = new Tensor(kernel_size, kernel_size, in_channels, Tensor.InitValues.HE);
     }
     public Tensor forward(IMultiDimObject tensor) {
         Matrix[] matrices = new Matrix[kernels_.length];

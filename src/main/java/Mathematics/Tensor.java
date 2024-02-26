@@ -2,6 +2,10 @@ package main.java.mathematics;
 
 import jdk.jshell.spi.ExecutionControl;
 import main.java.autograd.Value;
+import main.java.mathematics.initializers.ConstantInitializer;
+import main.java.mathematics.initializers.HeGaussianInitializer;
+import main.java.mathematics.initializers.IInitializer;
+import main.java.mathematics.initializers.RandomInitializer;
 import main.java.nn.layers.ILayer;
 
 import java.util.Iterator;
@@ -16,13 +20,20 @@ public class Tensor implements IMultiDimObject {
             throw new RuntimeException("Tensor has non-positive dimensions");
 
         size_ = new int[] { height, width, depth };
-        var random = new Random();
+
+        IInitializer sampler = switch (init_values) {
+            case ZEROS -> new ConstantInitializer(0);
+            case ONES -> new ConstantInitializer(1);
+            case HE -> new HeGaussianInitializer(height * width * depth);
+            case RANDOM -> new RandomInitializer(-0.25, 0.25);
+            default -> throw new RuntimeException("Unknown sampler");
+        };
+
         values_ = new Value[height][width][depth];
         for (int i = 0; i < height; ++i) {
             for (int j = 0; j < width; ++j) {
                 for (int k = 0; k < depth; ++k) {
-                    double current_value = switch (init_values) { case ZEROS -> 0; case RANDOM -> random.nextDouble(-0.25, 0.25); default -> throw new RuntimeException("Unknown value to fill"); };
-                    values_[i][j][k] = new Value(current_value);
+                    values_[i][j][k] = new Value(sampler.next());
                 }
             }
         }
@@ -324,5 +335,6 @@ public class Tensor implements IMultiDimObject {
             }
             System.out.println();
         }
+        System.out.println();
     }
 }

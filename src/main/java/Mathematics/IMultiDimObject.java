@@ -6,7 +6,7 @@ import main.java.autograd.Value;
 import java.util.Iterator;
 
 public interface IMultiDimObject extends Iterable<Value> {
-    public static enum InitValues { ZEROS, RANDOM }
+    public static enum InitValues { ZEROS, ONES, HE, RANDOM }
     public int[] get_size();
     public IMultiDimObject add(IMultiDimObject other);
     public IMultiDimObject multiply(IMultiDimObject other) throws ExecutionControl.NotImplementedException;

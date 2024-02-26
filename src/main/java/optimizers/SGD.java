@@ -14,14 +14,21 @@ public class SGD extends Optimizer {
     }
     @Override
     public void step() {
+        var names = new String[] {"conv1", "conv1_bias", "conv2", "conv2_bias", "ll1", "ll1_bias", "ll2", "ll2_bias"};
+        int i = 0;
         for (IMultiDimObject param: parameters_) {
-            int i = 0;
+
+            System.out.println(names[i]);
+//            System.out.printf("Current i: %d\n", i);
+
             for (Value val: param) {
-//                System.out.println(val.get_value());
+                System.out.printf("Value %f Gradient %f\n", val.get_value(), val.get_gradient(), names.length);
                 val.set_value(val.get_value() - alpha_ * val.get_gradient());
-                i++;
             }
-//            System.out.println(i);
+
+            i++;
+            System.out.println();
+
         }
     }
 

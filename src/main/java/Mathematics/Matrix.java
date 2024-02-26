@@ -1,6 +1,10 @@
 package main.java.mathematics;
 
 import main.java.autograd.Value;
+import main.java.mathematics.initializers.ConstantInitializer;
+import main.java.mathematics.initializers.HeGaussianInitializer;
+import main.java.mathematics.initializers.IInitializer;
+import main.java.mathematics.initializers.RandomInitializer;
 
 import java.util.Iterator;
 import java.util.Random;
@@ -14,11 +18,17 @@ public class Matrix implements IMultiDimObject {
         size_ = new int[] { height, width };
         values_ = new Value[height][width];
 
-        var random = new Random();
+        IInitializer sampler = switch (init_values) {
+            case ZEROS -> new ConstantInitializer(0);
+            case ONES -> new ConstantInitializer(1);
+            case HE -> new HeGaussianInitializer(width);
+            case RANDOM -> new RandomInitializer(-0.25, 0.25);
+            default -> throw new RuntimeException("Unknown sampler");
+        };
+
         for (int i = 0; i < height; ++i) {
             for (int j = 0; j < width; ++j) {
-                double current_value = switch (init_values) { case ZEROS -> 0; case RANDOM -> random.nextDouble(-0.25, 0.25); default -> throw new RuntimeException("Unknown value to fill"); };
-                values_[i][j] = new Value(current_value);
+                values_[i][j] = new Value(sampler.next());
             }
         }
     }
@@ -191,6 +201,7 @@ public class Matrix implements IMultiDimObject {
                 System.out.printf("%f ", values_[i][j].get_value());
             }
         }
+        System.out.println();
     }
 }
 

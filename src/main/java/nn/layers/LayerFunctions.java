@@ -150,12 +150,10 @@ public class LayerFunctions {
 
         for (int i = 0; i < output_height; ++i) {
             for (int j = 0; j < output_width; ++j) {
-//                System.out.printf("slices: [%d, %d] x [%d, %d]\n", i * size, size + i * size, j * size, size + j * size);
                 Tensor sliced_tensor = tensor.slice(
                         new int[] {i * size, size + i * size},
                         new int[] {j * size, size + j * size}
                 );
-//                sliced_tensor.print();
                 Value[] max_values = LayerFunctions.maxTensor(sliced_tensor);
                 for (int k = 0; k < tensor_size[2]; ++k)
                     output_tensor.set(new int[] {i, j, k}, max_values[k]);
@@ -242,10 +240,17 @@ class Program {
     }
 
     public static void main(String[] args) {
-        var layers = new ArrayList<ILayer>();
+        ArrayList<ILayer> layers = new ArrayList<>();
+
+        layers.add(new Convolution2D(3, 1, 3, 1, 0, true, null, Convolution.Activation.ReLU));
+        layers.add(new Convolution2D(1, 1, 3, 1, 0, true, null, Convolution.Activation.ReLU));
+        layers.add(new MaxPool2D(2));
+        layers.add(new Flatten2D());
+        layers.add(new LinearLayer(12*12*1, 10, true, "identity"));
         layers.add(new LinearLayer(10, 1, true, "sigmoid"));
 
-        var input_image = new Matrix(10, 1, IMultiDimObject.InitValues.RANDOM);
+
+        var input_image = new Tensor(28, 28, 3, IMultiDimObject.InitValues.RANDOM);
         var target = new Matrix(new double[][] {{1}}).transpose();
 
         var model = new Model(layers);
@@ -253,8 +258,7 @@ class Program {
         Optimizer optimizer = new SGD(model.get_parameters(), 0.01);
         Loss loss = new BCELoss();
 
-
-        for (int i = 0; i < 1000; ++i) {
+        for (int i = 0; i < 100; ++i) {
             var output = model.forward(input_image);
 
             loss.calculate_loss(output, target);
@@ -266,43 +270,5 @@ class Program {
             System.out.printf("Loss: %f\n", loss.get_loss().get_value());
 //            ((Matrix)output).transpose().print();
         }
-
-
-
-
-
-//        var layers = new ArrayList<ILayer>();
-//        layers.add(new LinearLayer(10, 10, true, "sigmoid"));
-//
-//        var input_vector = new Matrix(10, 1, IMultiDimObject.InitValues.RANDOM);
-//        var target_vector = new Matrix(new double[][] {{1, 1, 1, 1, 1, 0, 0, 0, 0, 0}}).transpose();
-//
-//        var mlp = new Model(layers);
-//        Optimizer optimizer = new SGD(mlp.get_parameters(), 0.01);
-//
-//        for (int i = 0; i < 1000; ++i) {
-//            Matrix output = (Matrix)mlp.forward(input_vector);
-//
-//            output.transpose().print();
-//
-////            Value mse_value = mse(output, target_vector);
-//            Value mse_value = bce(output, target_vector);
-//
-//            System.out.println();
-//            System.out.println(mse_value.get_value());
-//
-//            mse_value.backward();
-//            optimizer.step();
-//            optimizer.set_zero_gradients();
-//        }
-
-
-
-
-
-
-
-
-
     }
 }

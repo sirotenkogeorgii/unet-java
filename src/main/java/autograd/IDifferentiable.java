@@ -1,6 +1,7 @@
 package main.java.autograd;
 
 interface IDifferentiable {
+    static double gradient_clip_value = 10;
     public void backward();
     public double get_gradient();
     public void set_gradient(double gradient);

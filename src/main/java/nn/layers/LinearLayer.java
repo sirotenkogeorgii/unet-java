@@ -10,7 +10,7 @@ public class LinearLayer implements ILayer {
     private Matrix bias_;
     private String activation_;
     public LinearLayer(int in_features, int out_features, boolean bias, String activation) {
-        weights_ = new Matrix(out_features, in_features, IMultiDimObject.InitValues.RANDOM);
+        weights_ = new Matrix(out_features, in_features, IMultiDimObject.InitValues.HE);
         bias_ = bias ? new Matrix(out_features, 1, IMultiDimObject.InitValues.ZEROS) : null;
         activation_ = activation;
     }

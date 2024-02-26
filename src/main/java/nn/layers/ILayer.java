@@ -6,6 +6,7 @@ import main.java.mathematics.Matrix;
 import java.util.ArrayList;
 
 public interface ILayer {
+//    public String name;
     public IMultiDimObject forward(IMultiDimObject inputs);
     public ArrayList<IMultiDimObject> get_parameters();
 }

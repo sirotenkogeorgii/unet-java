@@ -24,6 +24,9 @@ public class Value implements IDifferentiable {
 //            System.out.println("AAAA");
             gradient_ += new_value.gradient_;
             other.gradient_ += new_value.gradient_;
+
+            gradient_ = Math.max(-gradient_clip_value, Math.min(gradient_, gradient_clip_value));
+            other.gradient_ = Math.max(-gradient_clip_value, Math.min(other.gradient_, gradient_clip_value));
         };
         new_value.parents_.add(this); new_value.parents_.add(other);
         return new_value;
@@ -45,6 +48,9 @@ public class Value implements IDifferentiable {
 //            System.out.println("AAAA");
             gradient_ += new_value.gradient_ * other.value_;
             other.gradient_ += new_value.gradient_ * value_;
+
+            gradient_ = Math.max(-gradient_clip_value, Math.min(gradient_, gradient_clip_value));
+            other.gradient_ = Math.max(-gradient_clip_value, Math.min(other.gradient_, gradient_clip_value));
         };
         new_value.parents_.add(this); new_value.parents_.add(other);
         return new_value;
@@ -57,17 +63,20 @@ public class Value implements IDifferentiable {
         new_value.prop_func_ = () -> {
 //            System.out.println("AAAA");
             gradient_ += new_value.gradient_ * (new_value.value_ > 0 ? 1 : 0);
+            gradient_ = Math.max(-gradient_clip_value, Math.min(gradient_, gradient_clip_value));
         };
         new_value.parents_.add(this);
         return new_value;
     }
 
     public Value log() {
-        if (value_ == 1) throw new RuntimeException("Attempt to logarithm 1");
-        var new_value = new Value(Math.log(value_));
+//        if (value_ == 1) throw new RuntimeException("Attempt to logarithm 1");
+        var new_value = value_ == 0 ? new Value(Math.log(value_ + 1e-15)) : new Value(Math.log(value_));
         new_value.prop_func_ = () -> {
-//            System.out.println("AAAA");
-            gradient_ += new_value.gradient_ * (1 / value_); // TODO: handle division by zero
+
+            gradient_ += value_ == 0 ? new_value.gradient_ * (1 / (value_ + 1e-15)) : new_value.gradient_ * (1 / value_);
+            gradient_ = Math.max(-gradient_clip_value, Math.min(gradient_, gradient_clip_value));
+//            System.out.printf("Gradient %f\n", gradient_);
         };
         new_value.parents_.add(this);
         return new_value;
@@ -76,8 +85,9 @@ public class Value implements IDifferentiable {
     public Value sigmoid() {
         var new_value = new Value(1 / (1 + Math.exp(-value_)));
         new_value.prop_func_ = () -> {
-//            System.out.println("AAAA");
+
             gradient_ += new_value.gradient_ * new_value.value_ * (1 - new_value.value_);
+            gradient_ = Math.max(-gradient_clip_value, Math.min(gradient_, gradient_clip_value));
         };
         new_value.parents_.add(this);
         return new_value;
