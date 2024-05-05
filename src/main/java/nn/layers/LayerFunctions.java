@@ -282,21 +282,23 @@ public class LayerFunctions {
     }
 
     public static Value bce_loss(Matrix matrix1, Matrix matrix2) {
-        Value result = new Value(0);
+//        Value result = new Value(0);
         int[] matrix_shape = matrix1.get_size();
-//        var values_array = new ArrayList<Value>();
+        var values_array = new ArrayList<Value>();
         for (int i = 0; i < matrix_shape[0]; ++i) {
             for (int j = 0; j < matrix_shape[1]; ++j) {
                 Value temp = bce_value(matrix1.get(i, j), matrix2.get(i, j));
-                result = result.add(temp);
-//                values_array.add(temp);
+//                result = result.add(temp);
+                values_array.add(temp);
             }
         }
-        return  result;
-//        return Value.add(values_array);
+//        return  result;
+        return Value.add(values_array);
     }
 
     private static Value bce_value(Value pred, Value target) {
-        return target.multiply(-1).multiply(pred.log()).sub(         target.multiply(-1).add(1).multiply(        pred.multiply(-1).add(1).log()           )                 );
+        var left_part = target.multiply(pred.log());
+        var right_part = target.multiply(-1).add(1).multiply(pred.multiply(-1).add(1).log());
+        return left_part.add(right_part).multiply(-1);
     }
 }

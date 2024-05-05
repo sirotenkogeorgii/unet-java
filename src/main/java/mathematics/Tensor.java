@@ -252,13 +252,13 @@ public class Tensor extends MultiDimObject {
     public boolean is_vector() { return size_[1] == 1 && size_[2] == 1; }
 
     public Value sum() {
-        //Value value = new Value(0);
+//        Value value = new Value(0);
         var values_array = new ArrayList<Value>();
 
         for (int i = 0; i < size_[0]; ++i) {
             for (int j = 0; j < size_[1]; ++j) {
                 for (int k = 0; k < size_[2]; ++k) {
-                    //value = value.add(values_[i][j][k]);
+//                    value = value.add(values_[i][j][k]);
                     values_array.add(values_[i][j][k]);
                 }
             }

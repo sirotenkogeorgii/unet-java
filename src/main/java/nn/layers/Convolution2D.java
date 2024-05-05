@@ -24,13 +24,10 @@ public class Convolution2D extends Convolution {
     }
 
     public Tensor forward(MultiDimObject tensor) {
-        long startTime = System.nanoTime();
-
         Matrix[] matrices = new Matrix[kernels_.length];
         Tensor casted_tensor = (Tensor)tensor;
 
-//        if (mode_ == ModelSettings.executionMode.PARALLEL) {
-        if (false) {
+        if (mode_ == ModelSettings.executionMode.PARALLEL) {
             IntStream.range(0, kernels_.length).parallel().forEach(i ->
                     matrices[i] = LayerFunctions.convolve2D(casted_tensor, kernels_[i], stride_, padding_));
         } else {
@@ -40,15 +37,9 @@ public class Convolution2D extends Convolution {
 
         var result = bias_ == null ? new Tensor(matrices) : (new Tensor(matrices)).add_vector(bias_);
 
-        var activated =  switch (activation_) {
+        return switch (activation_) {
             case ReLU -> result.relu();
             default -> result;
         };
-
-        long endTime = System.nanoTime();
-        long executionTime = endTime - startTime;
-        System.out.println("Execution time in convolution in milliseconds: " + executionTime / 1_000_000);
-
-        return activated;
     }
 }

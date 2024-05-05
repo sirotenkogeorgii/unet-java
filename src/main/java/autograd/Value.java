@@ -30,13 +30,12 @@ public class Value extends Differentiable {
         Value new_value = new Value(0);
         for (Value current_value: values) {
             new_value.value += current_value.value;
-//            if (current_value.requires_grad) new_value.parents_.add(current_value);
-            new_value.parents_.add(current_value);
+            if (current_value.requires_grad) new_value.parents_.add(current_value);
         }
         new_value.prop_func_ = () -> {
             for (var current_parent: new_value.parents_) {
                 current_parent.gradient += new_value.gradient;
-                current_parent.gradient = Math.max(-gradient_clip_value, Math.min(current_parent.gradient, gradient_clip_value));
+                //current_parent.gradient = Math.max(-gradient_clip_value, Math.min(current_parent.gradient, gradient_clip_value));
             }
         };
         if (new_value.parents_.isEmpty()) new_value.requires_grad = false;
@@ -50,8 +49,8 @@ public class Value extends Differentiable {
             gradient += new_value.gradient;
             other.gradient += new_value.gradient;
 
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
-            other.gradient = Math.max(-gradient_clip_value, Math.min(other.gradient, gradient_clip_value));
+            //gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            //other.gradient = Math.max(-gradient_clip_value, Math.min(other.gradient, gradient_clip_value));
         };
         if (requires_grad) new_value.parents_.add(this);
         if (other.requires_grad) new_value.parents_.add(other);
@@ -74,8 +73,8 @@ public class Value extends Differentiable {
         new_value.prop_func_ = () -> {
             gradient += new_value.gradient * other.value;
             other.gradient += new_value.gradient * value;
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
-            other.gradient = Math.max(-gradient_clip_value, Math.min(other.gradient, gradient_clip_value));
+            //gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            //other.gradient = Math.max(-gradient_clip_value, Math.min(other.gradient, gradient_clip_value));
         };
         if (requires_grad) new_value.parents_.add(this);
         if (other.requires_grad) new_value.parents_.add(other);
@@ -89,7 +88,7 @@ public class Value extends Differentiable {
         var new_value = new Value(value < 0 ? 0 : value);
         new_value.prop_func_ = () -> {
             gradient += new_value.gradient * (new_value.value > 0 ? 1 : 0); //(value_ > 0 ? 1 : 0);
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            //gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
         };
         if (requires_grad) new_value.parents_.add(this);
         new_value.requires_grad = requires_grad;
@@ -100,7 +99,7 @@ public class Value extends Differentiable {
         var new_value = value == 0 ? new Value(Math.log(value + 1e-15)) : new Value(Math.log(value));
         new_value.prop_func_ = () -> {
             gradient += value == 0 ? new_value.gradient * (1 / (value + 1e-15)) : new_value.gradient * (1 / value);
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            //gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
         };
         if (requires_grad) new_value.parents_.add(this);
         new_value.requires_grad = requires_grad;
@@ -111,7 +110,7 @@ public class Value extends Differentiable {
         var new_value = new Value(1 / (1 + Math.exp(-value)));
         new_value.prop_func_ = () -> {
             gradient += new_value.gradient * new_value.value * (1 - new_value.value);
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            //gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
         };
         if (requires_grad) new_value.parents_.add(this);
         new_value.requires_grad = requires_grad;
@@ -119,24 +118,11 @@ public class Value extends Differentiable {
     }
 
     public void backward() {
-        long startTime = System.nanoTime();
-
         ArrayList<Value> topological_order = Value.get_topological_order(this);
-
-        long endTime = System.nanoTime();
-        long executionTime = endTime - startTime;
-        System.out.println("Execution time in topological order in milliseconds: " + executionTime / 1_000_000);
-        System.out.println("Number of nodes in the topological order: " + topological_order.size());
-
-        startTime = System.nanoTime();
 
         gradient = 1;
         for (var value: topological_order)
             value.prop_func_.run();
-
-        endTime = System.nanoTime();
-        executionTime = endTime - startTime;
-        System.out.println("Execution time in topological order iteration in milliseconds: " + executionTime / 1_000_000);
     }
 
     protected static ArrayList<Value> get_topological_order(Value value) {
@@ -163,13 +149,3 @@ public class Value extends Differentiable {
         return topological_order;
     }
 }
-
-//class Program {
-//    public static void main(String[] args) {
-//        var x = new Value(5);
-//        var y = x.multiply(x);
-//        y.backward();
-//
-//        System.out.printf("[DEBUG] result gradient: %f\n", x.get_gradient());
-//    }
-//}

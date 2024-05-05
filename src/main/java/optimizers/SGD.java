@@ -16,8 +16,6 @@ public class SGD extends Optimizer {
     }
     @Override
     public void step() {
-        long startTime = System.nanoTime();
-
         if (mode_ == ModelSettings.executionMode.PARALLEL) {
             parameters_.parallelStream() // Process each MultiDimObject in parallel
 //                    .flatMap(param -> StreamSupport.stream(param.spliterator(), true)) // Flatten to stream of Values
@@ -26,16 +24,11 @@ public class SGD extends Optimizer {
         } else {
             for (MultiDimObject param: parameters_) {
                 for (Value val: param) {
-//                System.out.printf("Value %f Gradient %f\n", val.get_value(), val.get_gradient(), names.length);
+                System.out.printf("Value %f Gradient %f\n", val.value, val.gradient);
                     val.value = val.value - alpha_ * val.gradient;
                 }
             }
         }
-
-        long endTime = System.nanoTime();
-        long executionTime = endTime - startTime;
-        System.out.println("Execution time in sgd_step in milliseconds: " + executionTime / 1_000_000);
-
     }
 
     @Override

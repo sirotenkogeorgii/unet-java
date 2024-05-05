@@ -17,24 +17,17 @@ public class LinearLayer implements ILayer {
     }
 
     public Matrix forward(MultiDimObject input) {
-        long startTime = System.nanoTime();
-
         if (input == null) throw new RuntimeException("Input is null");
         if (!input.is_vector()) throw new RuntimeException("Input of the linear layer must be a vector");
         var output_matrix = weights_.multiply(input);
         if (bias_ != null) output_matrix = output_matrix.add(bias_);
 
-        var result = switch (activation_) {
+        return switch (activation_) {
             case "identity" -> output_matrix;
             case "relu" -> output_matrix.relu();
             case "sigmoid" -> output_matrix.sigmoid();
             default -> throw new RuntimeException("Unknown activation function");
         };
-
-        long endTime = System.nanoTime();
-        long executionTime = endTime - startTime;
-        System.out.println("Execution time in linear in milliseconds: " + executionTime / 1_000_000);
-        return result;
     }
 
     public void set_execution_mode(ModelSettings.executionMode mode) {
