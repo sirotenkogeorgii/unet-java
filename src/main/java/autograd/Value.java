@@ -3,32 +3,59 @@ package main.java.autograd;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Set;
+import java.util.HashSet;
 
-public class Value implements IDifferentiable {
-    private double value_;
-    private double gradient_;
+public class Value extends Differentiable {
     private ArrayList<Value> parents_;
-    private Runnable prop_func_;
-
-    public Value(double value) {
-        value_ = value;
-        gradient_ = 0;
+    public Value(double value_) {
+        value = value_;
+        gradient = 0;
         parents_ = new ArrayList<>();
         prop_func_ = () -> {};
+        requires_grad = true;
+    }
+
+    public Value(double value_, boolean requires_grad_) {
+        value = value_;
+        gradient = 0;
+        parents_ = new ArrayList<>();
+        prop_func_ = () -> {};
+        requires_grad = requires_grad_;
+    }
+
+    public static Value add(ArrayList<Value> values) {
+        if (values == null) throw new NullPointerException("Attempt to sum null array");
+
+        Value new_value = new Value(0);
+        for (Value current_value: values) {
+            new_value.value += current_value.value;
+//            if (current_value.requires_grad) new_value.parents_.add(current_value);
+            new_value.parents_.add(current_value);
+        }
+        new_value.prop_func_ = () -> {
+            for (var current_parent: new_value.parents_) {
+                current_parent.gradient += new_value.gradient;
+                current_parent.gradient = Math.max(-gradient_clip_value, Math.min(current_parent.gradient, gradient_clip_value));
+            }
+        };
+        if (new_value.parents_.isEmpty()) new_value.requires_grad = false;
+        return new_value;
     }
 
     public Value add(Value other) {
         if (other == null) throw new NullPointerException("Attempt to add null value");
-        var new_value = new Value(value_ + other.value_);
+        var new_value = new Value(value + other.value);
         new_value.prop_func_ = () -> {
-//            System.out.println("AAAA");
-            gradient_ += new_value.gradient_;
-            other.gradient_ += new_value.gradient_;
+            gradient += new_value.gradient;
+            other.gradient += new_value.gradient;
 
-            gradient_ = Math.max(-gradient_clip_value, Math.min(gradient_, gradient_clip_value));
-            other.gradient_ = Math.max(-gradient_clip_value, Math.min(other.gradient_, gradient_clip_value));
+            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            other.gradient = Math.max(-gradient_clip_value, Math.min(other.gradient, gradient_clip_value));
         };
-        new_value.parents_.add(this); new_value.parents_.add(other);
+        if (requires_grad) new_value.parents_.add(this);
+        if (other.requires_grad) new_value.parents_.add(other);
+        if (new_value.parents_.isEmpty()) new_value.requires_grad = false;
         return new_value;
     }
 
@@ -43,79 +70,93 @@ public class Value implements IDifferentiable {
 
     public Value multiply(Value other) {
         if (other == null) throw new NullPointerException("Attempt to multiply by null value");
-        var new_value = new Value(value_ * other.value_);
+        var new_value = new Value(value * other.value);
         new_value.prop_func_ = () -> {
-//            System.out.println("AAAA");
-            gradient_ += new_value.gradient_ * other.value_;
-            other.gradient_ += new_value.gradient_ * value_;
-
-            gradient_ = Math.max(-gradient_clip_value, Math.min(gradient_, gradient_clip_value));
-            other.gradient_ = Math.max(-gradient_clip_value, Math.min(other.gradient_, gradient_clip_value));
+            gradient += new_value.gradient * other.value;
+            other.gradient += new_value.gradient * value;
+            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            other.gradient = Math.max(-gradient_clip_value, Math.min(other.gradient, gradient_clip_value));
         };
-        new_value.parents_.add(this); new_value.parents_.add(other);
+        if (requires_grad) new_value.parents_.add(this);
+        if (other.requires_grad) new_value.parents_.add(other);
+        if (new_value.parents_.isEmpty()) new_value.requires_grad = false;
         return new_value;
     }
 
     public Value multiply(double constant) { return multiply(new Value(constant)); }
 
     public Value relu() {
-        var new_value = new Value(value_ < 0 ? 0 : value_);
+        var new_value = new Value(value < 0 ? 0 : value);
         new_value.prop_func_ = () -> {
-//            System.out.println("AAAA");
-            gradient_ += new_value.gradient_ * (new_value.value_ > 0 ? 1 : 0);
-            gradient_ = Math.max(-gradient_clip_value, Math.min(gradient_, gradient_clip_value));
+            gradient += new_value.gradient * (new_value.value > 0 ? 1 : 0); //(value_ > 0 ? 1 : 0);
+            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
         };
-        new_value.parents_.add(this);
+        if (requires_grad) new_value.parents_.add(this);
+        new_value.requires_grad = requires_grad;
         return new_value;
     }
 
     public Value log() {
-//        if (value_ == 1) throw new RuntimeException("Attempt to logarithm 1");
-        var new_value = value_ == 0 ? new Value(Math.log(value_ + 1e-15)) : new Value(Math.log(value_));
+        var new_value = value == 0 ? new Value(Math.log(value + 1e-15)) : new Value(Math.log(value));
         new_value.prop_func_ = () -> {
-
-            gradient_ += value_ == 0 ? new_value.gradient_ * (1 / (value_ + 1e-15)) : new_value.gradient_ * (1 / value_);
-            gradient_ = Math.max(-gradient_clip_value, Math.min(gradient_, gradient_clip_value));
-//            System.out.printf("Gradient %f\n", gradient_);
+            gradient += value == 0 ? new_value.gradient * (1 / (value + 1e-15)) : new_value.gradient * (1 / value);
+            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
         };
-        new_value.parents_.add(this);
+        if (requires_grad) new_value.parents_.add(this);
+        new_value.requires_grad = requires_grad;
         return new_value;
     }
 
     public Value sigmoid() {
-        var new_value = new Value(1 / (1 + Math.exp(-value_)));
+        var new_value = new Value(1 / (1 + Math.exp(-value)));
         new_value.prop_func_ = () -> {
-
-            gradient_ += new_value.gradient_ * new_value.value_ * (1 - new_value.value_);
-            gradient_ = Math.max(-gradient_clip_value, Math.min(gradient_, gradient_clip_value));
+            gradient += new_value.gradient * new_value.value * (1 - new_value.value);
+            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
         };
-        new_value.parents_.add(this);
+        if (requires_grad) new_value.parents_.add(this);
+        new_value.requires_grad = requires_grad;
         return new_value;
     }
 
-    public double get_gradient() { return gradient_; }
-    public double get_value() { return value_; }
-    public void set_value(double value) { value_ = value; }
-    public void set_gradient(double gradient) { gradient_ = gradient; }
-
     public void backward() {
-        ArrayList<Value> topological_order = get_topological_order();
-        gradient_ = 1;
+        long startTime = System.nanoTime();
+
+        ArrayList<Value> topological_order = Value.get_topological_order(this);
+
+        long endTime = System.nanoTime();
+        long executionTime = endTime - startTime;
+        System.out.println("Execution time in topological order in milliseconds: " + executionTime / 1_000_000);
+        System.out.println("Number of nodes in the topological order: " + topological_order.size());
+
+        startTime = System.nanoTime();
+
+        gradient = 1;
         for (var value: topological_order)
             value.prop_func_.run();
+
+        endTime = System.nanoTime();
+        executionTime = endTime - startTime;
+        System.out.println("Execution time in topological order iteration in milliseconds: " + executionTime / 1_000_000);
     }
 
-    private ArrayList<Value> get_topological_order() {
+    protected static ArrayList<Value> get_topological_order(Value value) {
         var topological_order = new ArrayList<Value>();
         Queue<Value> queue = new LinkedList<>();
-        queue.offer(this);
-        
+        Set<Value> inQueue = new HashSet<>();
+
+        queue.offer(value);
+        inQueue.add(value);
+
         while (!queue.isEmpty()) {
             var current_value = queue.poll();
             topological_order.add(current_value);
+            inQueue.remove(current_value);
+
             for (var parent: current_value.parents_) {
-                if (!queue.contains(parent))
+                if (!inQueue.contains(parent)) {
                     queue.add(parent);
+                    inQueue.add(parent);
+                }
             }
         }
 
@@ -123,12 +164,12 @@ public class Value implements IDifferentiable {
     }
 }
 
-class Program {
-    public static void main(String[] args) {
-        var x = new Value(5);
-        var y = x.multiply(x);
-        y.backward();
-
-        System.out.printf("[DEBUG] result gradient: %f\n", x.get_gradient());
-    }
-}
+//class Program {
+//    public static void main(String[] args) {
+//        var x = new Value(5);
+//        var y = x.multiply(x);
+//        y.backward();
+//
+//        System.out.printf("[DEBUG] result gradient: %f\n", x.get_gradient());
+//    }
+//}

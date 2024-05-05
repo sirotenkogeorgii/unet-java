@@ -1,16 +1,20 @@
 package main.java.nn.layers;
 
 import main.java.autograd.Value;
-import main.java.mathematics.IMultiDimObject;
 import main.java.mathematics.Matrix;
+import main.java.mathematics.MultiDimObject;
 import main.java.mathematics.Tensor;
 import main.java.nn.losses.BCELoss;
 import main.java.nn.losses.Loss;
-import main.java.nn.models.Model;
+import main.java.nn.models.ModelSettings;
+import main.java.nn.models.SequentialModel;
 import main.java.optimizers.Optimizer;
 import main.java.optimizers.SGD;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.ArrayList;
+import java.util.stream.IntStream;
 
 public class LayerFunctions {
     public static Matrix convolveTransposed2D(Tensor tensor, Tensor kernel, int stride, int padding) {
@@ -23,7 +27,7 @@ public class LayerFunctions {
         int output_height = (tensor_size[0] - 1) * stride - 2 * padding + kernel_size[0];
         int output_width = (tensor_size[1] - 1) * stride - 2 * padding + kernel_size[1];
 
-        Matrix output_matrix = LayerFunctions.padding2D(new Matrix(output_height, output_width, IMultiDimObject.InitValues.ZEROS), padding);
+        Matrix output_matrix = LayerFunctions.padding2D(new Matrix(output_height, output_width, MultiDimObject.InitValues.ZEROS), padding);
 
 //        System.out.printf("Output matrix is [%d, %d]\n", output_height, output_width);
 
@@ -40,7 +44,7 @@ public class LayerFunctions {
                 for (int kh = 0, h = i * stride; h < kernel_size[0] + i * stride; ++kh, ++h) {
                     for (int kw = 0, w = j * stride; w < kernel_size[1] + j * stride; ++kw, ++w) {
 //                        System.out.printf("Current inner index is [%d, %d]\n", h, w);
-                        output_matrix.set(new int[]{h, w}, multiplied_kernel.get(kh, kw));
+                        output_matrix.set(multiplied_kernel.get(kh, kw), h, w);
                     }
                 }
             }
@@ -48,8 +52,36 @@ public class LayerFunctions {
 
         return output_matrix;
     }
+
+
+
     public static Matrix convolve2D(Tensor tensor, Tensor kernel, int stride, int padding) {
-        // TODO: check arguments
+//        // TODO: check arguments
+//        if (tensor == null) throw new NullPointerException("Attempt to convolve null tensor");
+//        if (!is_valid_kernel(tensor, kernel)) throw new ArrayIndexOutOfBoundsException("Input tensor has incorrect size");
+//
+//        int[] tensor_size = tensor.get_size();
+//        int[] kernel_size = kernel.get_size();
+//
+//        int output_height = (tensor_size[0] + 2 * padding - kernel_size[0]) / stride + 1;
+//        int output_width = (tensor_size[1] + 2 * padding - kernel_size[1]) / stride + 1;
+//        var output_matrix_array = new Value[output_height][output_width];
+//
+//        var padded_tensor = padding2D(tensor, padding);
+//        for (int i = 0; i < output_height; ++i) {
+//            for (int j = 0; j < output_width; ++j) {
+//
+//                Tensor sliced_tensor = padded_tensor.slice(
+//                        new int[] {i * stride, kernel_size[0] + i * stride},
+//                        new int[] {j * stride, kernel_size[1] + j * stride}
+//                );
+//
+//                output_matrix_array[i][j] = kernel.pw_multiply(sliced_tensor).sum();
+//            }
+//        }
+//
+//        return new Matrix(output_matrix_array);
+
         if (tensor == null) throw new NullPointerException("Attempt to convolve null tensor");
         if (!is_valid_kernel(tensor, kernel)) throw new ArrayIndexOutOfBoundsException("Input tensor has incorrect size");
 
@@ -58,22 +90,75 @@ public class LayerFunctions {
 
         int output_height = (tensor_size[0] + 2 * padding - kernel_size[0]) / stride + 1;
         int output_width = (tensor_size[1] + 2 * padding - kernel_size[1]) / stride + 1;
-        var output_matrix = new Matrix(output_height, output_width, IMultiDimObject.InitValues.ZEROS);
+        Value[][] output_matrix_array = new Value[output_height][output_width];
 
-        var padded_tensor = padding2D(tensor, padding);
-        for (int i = 0; i < output_height; ++i) {
-            for (int j = 0; j < output_width; ++j) {
+        Tensor padded_tensor = padding2D(tensor, padding);
+
+//        int num_threads = output_height * output_width;
+//        ExecutorService executor = Executors.newFixedThreadPool(num_threads);
+//
+//        for (int i = 0; i < output_height; i++) {
+//            for (int j = 0; j < output_width; j++) {
+//                int finalI = i;
+//                int finalJ = j;
+//                int depth = kernel_size[2];
+//                executor.submit(() -> {
+//                    int startX = finalI * stride;
+//                    int endX = finalI * stride + kernel_size[0];
+//                    int startY = finalJ * stride;
+//                    int endY = finalJ * stride + kernel_size[1];
+//
+//                    Value window_sum = new Value(0);
+//                    for (int x = startX; x < endX; x++) {
+//                        for (int y = startY; y < endY; y++) {
+//                            for (int z = 0; z < depth; z++) {
+//                                var result = tensor.get(x, y, z).multiply(kernel.get(x - startX, y - startY, z));
+//                                window_sum = window_sum.add(result);
+//                            }
+//                        }
+//                    }
+//                    output_matrix_array[finalI][finalJ] = window_sum;
+//                });
+//            }
+//        }
+//
+//        executor.shutdown();
+//        while (!executor.isTerminated()) {
+//            // Wait for all tasks to complete
+//        }
+
+        // Parallelize over the output matrix's dimensions
+        IntStream.range(0, output_height).parallel().forEach(i -> {
+            IntStream.range(0, output_width).forEach(j -> {
+
                 Tensor sliced_tensor = padded_tensor.slice(
-                        new int[] {i * stride, kernel_size[0] + i * stride},
-                        new int[] {j * stride, kernel_size[1] + j * stride}
+                        new int[]{i * stride, i * stride + kernel_size[0]},
+                        new int[]{j * stride, j * stride + kernel_size[1]}
                 );
-//                sliced_tensor.print();
-                output_matrix.set(new int[] {i, j}, kernel.pw_multiply(sliced_tensor).sum());
-            }
-        }
 
-        return output_matrix;
+                output_matrix_array[i][j] = kernel.pw_multiply(sliced_tensor).sum();
+
+//                    int startX = i * stride;
+//                    int endX = i * stride + kernel_size[0];
+//                    int startY = j * stride;
+//                    int endY = j * stride + kernel_size[1];
+//
+//                    Value window_sum = new Value(0);
+//                    for (int x = startX; x < endX; x++) {
+//                        for (int y = startY; y < endY; y++) {
+//                            for (int z = 0; z < kernel_size[2]; z++) {
+//                                var result = padded_tensor.get(x, y, z).multiply(kernel.get(x - startX, y - startY, z));
+//                                window_sum = window_sum.add(result);
+//                            }
+//                        }
+//                    }
+//                    output_matrix_array[i][j] = window_sum;
+            });
+        });
+
+        return new Matrix(output_matrix_array);
     }
+
     private static boolean is_valid_kernel(Tensor tensor, Tensor kernel) {
         if (tensor == null) throw new RuntimeException("Tensor is null");
         if (kernel == null) throw new RuntimeException("Tensor kernel is null");
@@ -89,18 +174,19 @@ public class LayerFunctions {
         if (padding == 0) return tensor;
 
         int[] tensor_size = tensor.get_size();
-        var padded_tensor = new Tensor(tensor_size[0] + 2 * padding, tensor_size[1] + 2 * padding, tensor_size[2], IMultiDimObject.InitValues.ZEROS);
+        var padded_tensor = new Tensor(tensor_size[0] + 2 * padding, tensor_size[1] + 2 * padding, tensor_size[2], MultiDimObject.InitValues.ZEROS);
         // new Value[tensor_size[0] + 2 * padding][tensor_size[1] + 2 * padding][tensor_size[2]];
+        var padded_tensor_array = new Value[tensor_size[0] + 2 * padding][tensor_size[1] + 2 * padding][tensor_size[2]];
 
         for (int i = 0; i < tensor_size[0]; ++i) {
             for (int j = 0; j < tensor_size[1]; ++j) {
                 for (int k = 0; k < tensor_size[3]; ++k) {
-                    padded_tensor.set(new int[] {i + padding, j + padding, k}, tensor.get(new int[] {i, j, k}));
+                    padded_tensor_array[i + padding][j + padding][k] = tensor.get(i, j, k);
                 }
             }
         }
 
-        return padded_tensor;
+        return new Tensor(padded_tensor_array);
     }
     public static Matrix padding2D(Matrix matrix, int padding) {
         if (matrix == null) throw new RuntimeException("Input matrix is null");
@@ -108,15 +194,16 @@ public class LayerFunctions {
         if (padding == 0) return matrix;
 
         int[] matrix_size = matrix.get_size();
-        var padded_matrix = new Matrix(matrix_size[0] + 2 * padding, matrix_size[1] + 2 * padding, IMultiDimObject.InitValues.ZEROS);
+//        var padded_matrix = new Matrix(matrix_size[0] + 2 * padding, matrix_size[1] + 2 * padding, IMultiDimObject.InitValues.ZEROS);
+        var padded_matrix_array = new Value[matrix_size[0] + 2 * padding][matrix_size[1] + 2 * padding];
 
         for (int i = 0; i < matrix_size[0]; ++i) {
             for (int j = 0; j < matrix_size[1]; ++j) {
-                padded_matrix.set(new int[] {i + padding, j + padding}, matrix.get(i, j));
+                padded_matrix_array[i + padding][j + padding] = matrix.get(i, j);
             }
         }
 
-        return padded_matrix;
+        return new Matrix(padded_matrix_array);
     }
 
     public static Matrix flatten(Tensor tensor) {
@@ -124,17 +211,18 @@ public class LayerFunctions {
         int[] tensor_size = tensor.get_size();
 
         int flatten_size = tensor_size[0] * tensor_size[1] * tensor_size[2];
-        var values = new Matrix(flatten_size, 1, IMultiDimObject.InitValues.ZEROS);
+//        var values = new Matrix(flatten_size, 1, IMultiDimObject.InitValues.ZEROS);
+        var values_array = new Value[flatten_size][1];
 
         int current_index = 0;
         for (int i = 0; i < tensor_size[0]; ++i) {
             for (int j = 0; j < tensor_size[1]; ++j) {
                 for (int k = 0; k < tensor_size[2]; ++k) {
-                    values.set(new int[] {current_index++, 0}, tensor.get(new int[] {i, j, k}));
+                    values_array[current_index++][0] = tensor.get(new int[] {i, j, k});
                 }
             }
         }
-        return values;
+        return new Matrix(values_array);
     }
 
     public static Tensor maxPool2D(Tensor tensor, int size) {
@@ -146,7 +234,7 @@ public class LayerFunctions {
 
         int output_height = tensor_size[0] / size;
         int output_width = tensor_size[1] / size;
-        var output_tensor = new Tensor(output_height, output_width, tensor_size[2], IMultiDimObject.InitValues.ZEROS);
+        var output_tensor = new Tensor(output_height, output_width, tensor_size[2], MultiDimObject.InitValues.ZEROS);
 
         for (int i = 0; i < output_height; ++i) {
             for (int j = 0; j < output_width; ++j) {
@@ -156,7 +244,7 @@ public class LayerFunctions {
                 );
                 Value[] max_values = LayerFunctions.maxTensor(sliced_tensor);
                 for (int k = 0; k < tensor_size[2]; ++k)
-                    output_tensor.set(new int[] {i, j, k}, max_values[k]);
+                    output_tensor.set(max_values[k], i, j, k);
             }
         }
 
@@ -178,7 +266,7 @@ public class LayerFunctions {
         int[] matrix_size = matrix.get_size();
         for (int i = 0; i < matrix_size[0]; ++i) {
             for (int j = 0; j < matrix_size[1]; ++j) {
-                if (current_value.get_value() < matrix.get(i, j).get_value())
+                if (current_value.value < matrix.get(i, j).value)
                     current_value = matrix.get(i, j);
             }
         }
@@ -196,79 +284,19 @@ public class LayerFunctions {
     public static Value bce_loss(Matrix matrix1, Matrix matrix2) {
         Value result = new Value(0);
         int[] matrix_shape = matrix1.get_size();
+//        var values_array = new ArrayList<Value>();
         for (int i = 0; i < matrix_shape[0]; ++i) {
             for (int j = 0; j < matrix_shape[1]; ++j) {
                 Value temp = bce_value(matrix1.get(i, j), matrix2.get(i, j));
                 result = result.add(temp);
+//                values_array.add(temp);
             }
         }
         return  result;
+//        return Value.add(values_array);
     }
 
     private static Value bce_value(Value pred, Value target) {
         return target.multiply(-1).multiply(pred.log()).sub(         target.multiply(-1).add(1).multiply(        pred.multiply(-1).add(1).log()           )                 );
-    }
-}
-
-class Program {
-    static Value mse(Matrix matrix1, Matrix matrix2) {
-        Value result = new Value(0);
-        int[] matrix_shape = matrix1.get_size();
-        for (int i = 0; i < matrix_shape[0]; ++i) {
-            for (int j = 0; j < matrix_shape[1]; ++j) {
-                Value temp = matrix1.get(i, j).sub(matrix2.get(i, j));
-                result = result.add(temp.multiply(temp));
-            }
-        }
-        return  result;
-    }
-
-    static Value bce_value(Value pred, Value target) {
-        return target.multiply(-1).multiply(pred.log()).sub(         target.multiply(-1).add(1).multiply(        pred.multiply(-1).add(1).log()           )                 );
-    }
-
-    static Value bce_loss(Matrix matrix1, Matrix matrix2) {
-        Value result = new Value(0);
-        int[] matrix_shape = matrix1.get_size();
-        for (int i = 0; i < matrix_shape[0]; ++i) {
-            for (int j = 0; j < matrix_shape[1]; ++j) {
-                Value temp = bce_value(matrix1.get(i, j), matrix2.get(i, j));
-                result = result.add(temp);
-            }
-        }
-        return  result;
-    }
-
-    public static void main(String[] args) {
-        ArrayList<ILayer> layers = new ArrayList<>();
-
-        layers.add(new Convolution2D(3, 1, 3, 1, 0, true, null, Convolution.Activation.ReLU));
-        layers.add(new Convolution2D(1, 1, 3, 1, 0, true, null, Convolution.Activation.ReLU));
-        layers.add(new MaxPool2D(2));
-        layers.add(new Flatten2D());
-        layers.add(new LinearLayer(12*12*1, 10, true, "identity"));
-        layers.add(new LinearLayer(10, 1, true, "sigmoid"));
-
-
-        var input_image = new Tensor(28, 28, 3, IMultiDimObject.InitValues.RANDOM);
-        var target = new Matrix(new double[][] {{1}}).transpose();
-
-        var model = new Model(layers);
-
-        Optimizer optimizer = new SGD(model.get_parameters(), 0.01);
-        Loss loss = new BCELoss();
-
-        for (int i = 0; i < 100; ++i) {
-            var output = model.forward(input_image);
-
-            loss.calculate_loss(output, target);
-            loss.backward();
-
-            optimizer.step();
-            optimizer.set_zero_gradients();
-
-            System.out.printf("Loss: %f\n", loss.get_loss().get_value());
-//            ((Matrix)output).transpose().print();
-        }
     }
 }
