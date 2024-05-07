@@ -1,4 +1,4 @@
-package main.java.autograd;
+package autograd;
 
 /**
  * Represents an abstract base class for differentiable variables.

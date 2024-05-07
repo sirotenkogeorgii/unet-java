@@ -1,4 +1,4 @@
-package main.java.datasets;
+package datasets;
 
 import javax.imageio.ImageIO;
 import java.awt.Image;

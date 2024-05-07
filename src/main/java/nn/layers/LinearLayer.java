@@ -1,8 +1,8 @@
-package main.java.nn.layers;
+package nn.layers;
 
-import main.java.mathematics.Matrix;
-import main.java.mathematics.MultiDimObject;
-import main.java.nn.models.ModelSettings;
+import mathematics.Matrix;
+import mathematics.MultiDimObject;
+import nn.models.ModelSettings;
 
 import java.util.ArrayList;
 
@@ -45,12 +45,15 @@ public class LinearLayer extends Layer {
         var output_matrix = weights_.multiply(input);
         if (bias_ != null) output_matrix = output_matrix.add(bias_);
 
+//        print();
+
         return switch (activation_) {
             case Identity -> output_matrix;
             case ReLU -> output_matrix.relu();
             case LeakyReLU -> output_matrix.leakyRelu();
             case Sigmoid -> output_matrix.sigmoid();
-            default -> throw new RuntimeException("Unknown activation function");
+            case Softmax -> output_matrix.softmax();
+            default -> throw new RuntimeException("Unknown activation function for matrix");
         };
     }
 

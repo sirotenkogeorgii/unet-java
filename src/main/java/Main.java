@@ -1,17 +1,13 @@
-package main.java;
-
-import main.java.mathematics.Matrix;
-import main.java.mathematics.MultiDimObject;
-import main.java.mathematics.Tensor;
-import main.java.nn.layers.*;
-import main.java.nn.losses.BCELoss;
-import main.java.nn.losses.Loss;
-import main.java.nn.models.ModelSettings;
-import main.java.nn.models.SequentialModel;
-import main.java.optimizers.Adam;
-import main.java.optimizers.Momentum;
-import main.java.optimizers.SGD;
-import main.java.optimizers.Optimizer;
+import mathematics.Matrix;
+import mathematics.MultiDimObject;
+import mathematics.Tensor;
+import nn.layers.*;
+import nn.losses.BCELoss;
+import nn.losses.Loss;
+import nn.models.ModelSettings;
+import nn.models.SequentialModel;
+import optimizers.Momentum;
+import optimizers.Optimizer;
 
 import java.util.ArrayList;
 

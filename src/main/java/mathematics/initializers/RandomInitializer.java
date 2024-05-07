@@ -1,4 +1,4 @@
-package main.java.mathematics.initializers;
+package mathematics.initializers;
 
 import java.util.Random;
 

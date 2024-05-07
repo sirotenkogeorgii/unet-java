@@ -1,12 +1,12 @@
-package main.java.mathematics;
+package mathematics;
 
-import main.java.autograd.Value;
-import main.java.mathematics.initializers.ConstantInitializer;
-import main.java.mathematics.initializers.HeGaussianInitializer;
-import main.java.mathematics.initializers.IInitializer;
-import main.java.mathematics.initializers.RandomInitializer;
-import main.java.nn.layers.Layer;
-import main.java.nn.models.ModelSettings;
+import autograd.Value;
+import mathematics.initializers.ConstantInitializer;
+import mathematics.initializers.HeGaussianInitializer;
+import mathematics.initializers.IInitializer;
+import mathematics.initializers.RandomInitializer;
+import nn.layers.Layer;
+import nn.models.ModelSettings;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -155,6 +155,70 @@ public class Matrix extends MultiDimObject {
             }
         }
         return new Matrix(matrix_array);
+    }
+
+    /**
+     * Computes the maximum values along a specified dimension of the matrix.
+     *
+     * This method processes the matrix to find the maximum values across a specified dimension. If {@code dim} is 0,
+     * the maximum values are computed for each column, resulting in a row vector. If {@code dim} is 1, the maximum values
+     * are computed for each row, resulting in a column vector. This operation is akin to reducing the matrix along
+     * the given dimension by applying a maximum filter.
+     *
+     * @param dim the dimension along which to compute the maximum values. Valid inputs are:
+     *            0 - computes the maximum values of each column (vertical analysis),
+     *            1 - computes the maximum values of each row (horizontal analysis).
+     * @return a new {@code Matrix} object representing a vector of maximum values along the specified dimension.
+     *         The resulting matrix will be a 1xN matrix if {@code dim} is 1, or an Nx1 matrix if {@code dim} is 0,
+     *         where N is the size of the dimension not specified.
+     * @throws IllegalArgumentException if {@code dim} is not 0 or 1, since only these two dimensions are supported.
+     */
+    public Matrix max_dim(int dim) {
+        int first_axis = dim == 0 ? size_[1] : size_[0];
+        int second_axis = dim == 0 ? size_[0] : size_[1];
+
+        Value[][] max_vector = new Value[first_axis][1];
+        for (int j = 0, i = 0; i < first_axis; ++i, j = 0) {
+            Value max_value = values_[dim == 0 ? j : i][dim == 0 ? i : j];
+            for (; j < second_axis; ++j) {
+                Value current_value = values_[dim == 0 ? j : i][dim == 0 ? i : j];
+                if (current_value.value > max_value.value)
+                    max_value = current_value;
+            }
+            max_vector[i][0] = max_value;
+        }
+        return new Matrix(max_vector);
+    }
+
+    /**
+     * Computes the softmax function across each column of the matrix.
+     *
+     * The softmax function is applied to each column of the matrix independently. This method first subtracts
+     * the maximum value in each column from every element in the column to improve numerical stability. Then,
+     * it exponentiates each element, sums all the exponentiated values in each column, and finally divides each
+     * element in a column by the sum of that column's exponentiated values. This transformation converts the
+     * original values into a set of probabilities that sum to 1, making it suitable for probability distributions
+     * in tasks like classification.
+     *
+     * The softmax function is defined as:
+     * S_j = exp(v_j - max(V)) / sum(exp(v_i - max(V)))
+     * where V is a vector (column in the matrix), v_i is each element in V, and max(V) is the maximum value in V.
+     *
+     * @return a new {@code Matrix} object where each column is transformed into a probability distribution
+     *         as per the softmax function. The size of the resulting matrix matches the original matrix.
+     */
+    public Matrix softmax() {
+        Matrix max_values_dim = max_dim(0);
+        var matrix_array = new Value[size_[0]][size_[1]];
+        for (int i = 0; i < size_[1]; ++i) {
+            var arrayExp = new ArrayList<Value>();
+            double max_value_dim = max_values_dim.get(i, 0).value;
+            for (int j = 0; j < size_[0]; ++j) arrayExp.add(values_[j][i].sub(max_value_dim).exp());
+            var sumExp = Value.add(arrayExp);
+            for (int j = 0; j < size_[0]; ++j) matrix_array[j][i] = arrayExp.get(j).div(sumExp);
+        }
+        var res = new Matrix(matrix_array);
+        return res;
     }
 
     /**

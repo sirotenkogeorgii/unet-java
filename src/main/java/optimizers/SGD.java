@@ -1,8 +1,8 @@
-package main.java.optimizers;
+package optimizers;
 
-import main.java.autograd.Value;
-import main.java.mathematics.MultiDimObject;
-import main.java.nn.models.ModelSettings;
+import autograd.Value;
+import mathematics.MultiDimObject;
+import nn.models.ModelSettings;
 
 import java.util.ArrayList;
 import java.util.stream.StreamSupport;
@@ -36,32 +36,11 @@ public class SGD extends Optimizer {
         if (mode_ == ModelSettings.executionMode.PARALLEL) {
             parameters_.parallelStream()
                     .flatMap(param -> StreamSupport.stream(param.spliterator(), false))
-                    .forEach(val -> val.value = val.value - alpha_ * val.gradient);
+                    .forEach(val -> val.value = val.value - alpha_ * clip_gradient(val.gradient));
         } else {
             for (MultiDimObject param: parameters_) {
                 for (Value val: param) {
-                    val.value = val.value - alpha_ * val.gradient;
-                }
-            }
-        }
-    }
-
-    /**
-     * Resets the gradients of all parameters to zero. This is necessary before computing gradients
-     * for a new batch to avoid accumulating gradients from multiple backward passes.
-     */
-    @Override
-    public void set_zero_gradients() {
-        if (mode_ == ModelSettings.executionMode.PARALLEL) {
-            parameters_.parallelStream()
-                    .flatMap(param -> StreamSupport.stream(param.spliterator(), false))
-                    .forEach(val -> {
-                        val.gradient = 0;
-                    });
-        } else {
-            for (MultiDimObject param: parameters_) {
-                for (Value val: param) {
-                    val.gradient = 0;
+                    val.value = val.value - alpha_ * clip_gradient(val.gradient);
                 }
             }
         }

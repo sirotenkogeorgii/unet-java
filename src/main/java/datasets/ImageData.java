@@ -1,6 +1,6 @@
-package main.java.datasets;
+package datasets;
 
-import main.java.mathematics.Tensor;
+import mathematics.Tensor;
 import java.io.IOException;
 import java.nio.file.Path;
 

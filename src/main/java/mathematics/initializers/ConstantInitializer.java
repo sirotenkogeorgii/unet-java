@@ -1,4 +1,4 @@
-package main.java.mathematics.initializers;
+package mathematics.initializers;
 
 /**
  * An initializer that provides a constant value for every initialization call.

@@ -1,7 +1,7 @@
-package main.java.nn.losses;
+package nn.losses;
 
-import main.java.autograd.Value;
-import main.java.mathematics.MultiDimObject;
+import autograd.Value;
+import mathematics.MultiDimObject;
 
 /**
  * Abstract base class for loss functions in neural networks. This class provides the structure and necessary methods

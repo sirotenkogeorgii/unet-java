@@ -1,4 +1,4 @@
-package main.java.datasets;
+package datasets;
 
 import java.nio.file.Path;
 

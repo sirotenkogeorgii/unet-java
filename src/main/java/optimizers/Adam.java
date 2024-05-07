@@ -1,11 +1,10 @@
-package main.java.optimizers;
+package optimizers;
 
-import main.java.autograd.Value;
-import main.java.mathematics.MultiDimObject;
-import main.java.nn.models.ModelSettings;
+import autograd.Value;
+import mathematics.MultiDimObject;
+import nn.models.ModelSettings;
 
 import java.util.ArrayList;
-import java.util.stream.StreamSupport;
 
 /**
  * Implements the Adam optimization algorithm, which computes adaptive learning rates for each parameter.
@@ -59,8 +58,9 @@ public class Adam extends Optimizer {
         int i = 0;
         for (MultiDimObject param: parameters_) {
             for (Value val: param) {
-                double current_moment1 = momentum_rate1_ * previous_moment1_[i] + (1 - momentum_rate1_) * val.gradient;
-                double current_moment2 = momentum_rate2_ * previous_moment2_[i] + (1 - momentum_rate2_) * val.gradient * val.gradient;
+                double clipped_gradient = clip_gradient(val.gradient);
+                double current_moment1 = momentum_rate1_ * previous_moment1_[i] + (1 - momentum_rate1_) * clipped_gradient;
+                double current_moment2 = momentum_rate2_ * previous_moment2_[i] + (1 - momentum_rate2_) * clipped_gradient * clipped_gradient;
                 previous_moment1_[i] = current_moment1;
                 previous_moment2_[i] = current_moment2;
                 double corrected_moment1 = current_moment1 / (1 - Math.pow(momentum_rate1_, timestep));
@@ -70,27 +70,6 @@ public class Adam extends Optimizer {
             }
         }
         timestep++;
-    }
-
-    /**
-     * Resets the gradients of all parameters to zero. This is necessary before computing gradients
-     * for a new batch to avoid accumulating gradients from multiple backward passes.
-     */
-    @Override
-    public void set_zero_gradients() {
-        if (mode_ == ModelSettings.executionMode.PARALLEL) {
-            parameters_.parallelStream()
-                    .flatMap(param -> StreamSupport.stream(param.spliterator(), false))
-                    .forEach(val -> {
-                        val.gradient = 0;
-                    });
-        } else {
-            for (MultiDimObject param: parameters_) {
-                for (Value val: param) {
-                    val.gradient = 0;
-                }
-            }
-        }
     }
 }
 

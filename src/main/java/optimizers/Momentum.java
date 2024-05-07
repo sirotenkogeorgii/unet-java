@@ -1,8 +1,8 @@
-package main.java.optimizers;
+package optimizers;
 
-import main.java.autograd.Value;
-import main.java.mathematics.MultiDimObject;
-import main.java.nn.models.ModelSettings;
+import autograd.Value;
+import mathematics.MultiDimObject;
+import nn.models.ModelSettings;
 
 import java.util.ArrayList;
 import java.util.stream.StreamSupport;
@@ -49,35 +49,11 @@ public class Momentum extends Optimizer {
         int i = 0;
         for (MultiDimObject param: parameters_) {
             for (Value val: param) {
-                double current_momentum = momentum_rate_ * previous_momentum_[i] + alpha_ * val.gradient;
+                double clipped_gradient = clip_gradient(val.gradient);
+                double current_momentum = momentum_rate_ * previous_momentum_[i] + alpha_ * clipped_gradient;
                 previous_momentum_[i] = current_momentum;
-
-//                if (current_momentum > 2 || current_momentum < -2)
-//                System.out.println(current_momentum);
-
                 val.value = val.value - current_momentum;
                 i++;
-            }
-        }
-    }
-
-    /**
-     * Resets the gradients of all parameters to zero. This is necessary before computing gradients
-     * for a new batch to avoid accumulating gradients from multiple backward passes.
-     */
-    @Override
-    public void set_zero_gradients() {
-        if (mode_ == ModelSettings.executionMode.PARALLEL) {
-            parameters_.parallelStream()
-                    .flatMap(param -> StreamSupport.stream(param.spliterator(), false))
-                    .forEach(val -> {
-                        val.gradient = 0;
-                    });
-        } else {
-            for (MultiDimObject param: parameters_) {
-                for (Value val: param) {
-                    val.gradient = 0;
-                }
             }
         }
     }

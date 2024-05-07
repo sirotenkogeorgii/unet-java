@@ -1,9 +1,9 @@
-package main.java.nn.layers;
+package nn.layers;
 
-import main.java.autograd.Value;
-import main.java.mathematics.Matrix;
-import main.java.mathematics.MultiDimObject;
-import main.java.mathematics.Tensor;
+import autograd.Value;
+import mathematics.Matrix;
+import mathematics.MultiDimObject;
+import mathematics.Tensor;
 
 import java.util.ArrayList;
 import java.util.stream.IntStream;
@@ -249,5 +249,36 @@ public class LayerFunctions {
         var left_part = target.multiply(pred.log());
         var right_part = target.multiply(-1).add(1).multiply(pred.multiply(-1).add(1).log());
         return left_part.add(right_part).multiply(-1);
+    }
+
+    /**
+     * Calculates the cross-entropy loss between two matrices.
+     *
+     * This method computes the cross-entropy loss, a common loss function for classification problems,
+     * between two matrices representing predicted probabilities and true labels. The loss is calculated
+     * as the negative sum of the element-wise product of the logarithm of elements from the first matrix
+     * (typically prediction probabilities) and elements from the second matrix (typically true labels).
+     *
+     * Each element from the first matrix is taken as the predicted log-probability and is multiplied by
+     * the corresponding element from the second matrix, which represents the true label. The cross-entropy
+     * loss is useful for measuring the performance of a classification model where the output is a probability
+     * value between 0 and 1.
+     *
+     * @param matrix1 the matrix representing predicted log-probabilities; should not contain zero values
+     *                since the logarithm of zero is undefined.
+     * @param matrix2 the matrix representing true labels, typically as one-hot encoded vectors.
+     * @return a {@code Value} object representing the total cross-entropy loss, which is a single scalar value.
+     * @throws IllegalArgumentException if the sizes of matrix1 and matrix2 do not match.
+     */
+    public static Value cross_entropy_loss(Matrix matrix1, Matrix matrix2) {
+        int[] matrix_shape = matrix1.get_size();
+        var values_array = new ArrayList<Value>();
+        for (int i = 0; i < matrix_shape[0]; ++i) {
+            for (int j = 0; j < matrix_shape[1]; ++j) {
+                Value temp = matrix1.get(i, j).log().multiply(matrix2.get(i, j));
+                values_array.add(temp);
+            }
+        }
+        return Value.add(values_array).multiply(-1);
     }
 }

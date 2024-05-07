@@ -1,6 +1,6 @@
-package main.java.datasets;
+package datasets;
 
-import main.java.mathematics.Tensor;
+import mathematics.Tensor;
 
 /**
  * Interface defining the essential methods required for accessing data in datasets.

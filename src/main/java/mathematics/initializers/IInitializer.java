@@ -1,4 +1,4 @@
-package main.java.mathematics.initializers;
+package mathematics.initializers;
 
 /**
  * Interface defining a method for generating initialization values.

@@ -1,6 +1,6 @@
-package main.java.autograd;
+package autograd;
 
-import main.java.autograd.utils.GraphSorter;
+import autograd.utils.GraphSorter;
 import java.util.ArrayList;
 
 /**

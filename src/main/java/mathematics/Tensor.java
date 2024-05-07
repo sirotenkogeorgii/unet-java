@@ -1,12 +1,12 @@
-package main.java.mathematics;
+package mathematics;
 
-import main.java.autograd.Value;
-import main.java.mathematics.initializers.ConstantInitializer;
-import main.java.mathematics.initializers.HeGaussianInitializer;
-import main.java.mathematics.initializers.IInitializer;
-import main.java.mathematics.initializers.RandomInitializer;
-import main.java.nn.layers.Layer;
-import main.java.nn.models.ModelSettings;
+import autograd.Value;
+import mathematics.initializers.ConstantInitializer;
+import mathematics.initializers.HeGaussianInitializer;
+import mathematics.initializers.IInitializer;
+import mathematics.initializers.RandomInitializer;
+import nn.layers.Layer;
+import nn.models.ModelSettings;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -412,6 +412,7 @@ public class Tensor extends MultiDimObject {
 
         return new Matrix(matrix_array);
     }
+
 
     /**
      * Applies the Rectified Linear Unit (ReLU) activation function to each element of the tensor.

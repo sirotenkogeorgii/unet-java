@@ -1,4 +1,4 @@
-package main.java.nn.models;
+package nn.models;
 
 /**
  * Contains settings that control the execution and behavior of neural network models.

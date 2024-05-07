@@ -1,6 +1,6 @@
-package main.java.autograd.utils;
+package autograd.utils;
 
-import main.java.autograd.Value;
+import autograd.Value;
 import java.util.*;
 
 /**

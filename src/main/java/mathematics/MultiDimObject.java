@@ -1,9 +1,9 @@
-package main.java.mathematics;
+package mathematics;
 
 import jdk.jshell.spi.ExecutionControl;
-import main.java.autograd.Differentiable;
-import main.java.autograd.Value;
-import main.java.nn.models.ModelSettings;
+import autograd.Differentiable;
+import autograd.Value;
+import nn.models.ModelSettings;
 
 /**
  * Abstract class defining a multi-dimensional mathematical object that supports

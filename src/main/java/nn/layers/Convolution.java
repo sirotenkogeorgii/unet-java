@@ -1,9 +1,9 @@
-package main.java.nn.layers;
+package nn.layers;
 
-import main.java.mathematics.Matrix;
-import main.java.mathematics.MultiDimObject;
-import main.java.mathematics.Tensor;
-import main.java.nn.models.ModelSettings;
+import mathematics.Matrix;
+import mathematics.MultiDimObject;
+import mathematics.Tensor;
+import nn.models.ModelSettings;
 
 import java.util.ArrayList;
 import java.util.Arrays;

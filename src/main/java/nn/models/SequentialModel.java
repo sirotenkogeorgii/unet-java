@@ -1,7 +1,7 @@
-package main.java.nn.models;
+package nn.models;
 
-import main.java.mathematics.MultiDimObject;
-import main.java.nn.layers.Layer;
+import mathematics.MultiDimObject;
+import nn.layers.Layer;
 
 import java.util.ArrayList;
 

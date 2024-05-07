@@ -1,7 +1,7 @@
-package main.java.nn.layers;
+package nn.layers;
 
-import main.java.mathematics.MultiDimObject;
-import main.java.nn.models.ModelSettings;
+import mathematics.MultiDimObject;
+import nn.models.ModelSettings;
 
 import java.util.ArrayList;
 
@@ -16,9 +16,9 @@ public abstract class Layer {
      * Enumerates possible activation functions that can be used by neural network layers.
      * Activation functions are critical in neural networks as they introduce non-linearities
      * into the model, allowing the network to learn more complex patterns.
-     * Possible activations: [ReLU, LeakyReLU, Sigmoid, Identity].
+     * Possible activations: [ReLU, LeakyReLU, Sigmoid, Softmax, Identity].
      */
-    public static enum Activation { ReLU, LeakyReLU, Sigmoid, Identity }
+    public static enum Activation { ReLU, LeakyReLU, Sigmoid, Softmax, Identity }
 
     /**
      * The activation function to be used by this layer. Defaults to Identity,

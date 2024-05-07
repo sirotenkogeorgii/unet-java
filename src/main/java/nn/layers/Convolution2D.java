@@ -1,9 +1,9 @@
-package main.java.nn.layers;
+package nn.layers;
 
-import main.java.mathematics.MultiDimObject;
-import main.java.mathematics.Tensor;
-import main.java.mathematics.Matrix;
-import main.java.nn.models.ModelSettings;
+import mathematics.MultiDimObject;
+import mathematics.Tensor;
+import mathematics.Matrix;
+import nn.models.ModelSettings;
 
 import java.util.stream.IntStream;
 
@@ -69,7 +69,7 @@ public class Convolution2D extends Convolution {
             case LeakyReLU -> result.leakyRelu();
             case Sigmoid -> result.sigmoid();
             case Identity -> result;
-            default -> throw new RuntimeException("Unknown activation function");
+            default -> throw new RuntimeException("Unknown activation function for tensor");
         };
     }
 }
