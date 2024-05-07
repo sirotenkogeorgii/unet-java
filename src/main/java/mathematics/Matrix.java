@@ -5,23 +5,29 @@ import main.java.mathematics.initializers.ConstantInitializer;
 import main.java.mathematics.initializers.HeGaussianInitializer;
 import main.java.mathematics.initializers.IInitializer;
 import main.java.mathematics.initializers.RandomInitializer;
+import main.java.nn.layers.Layer;
 import main.java.nn.models.ModelSettings;
 
 import java.util.ArrayList;
-import java.util.concurrent.RecursiveTask;
-import java.util.concurrent.ForkJoinPool;
-
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
-
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RecursiveAction;
 import java.util.stream.IntStream;
 
+/**
+ * Represents a matrix of {@link Value} objects. This class provides functionality for
+ * various matrix operations such as addition, multiplication, and applying activation functions,
+ * supporting both sequential and parallel execution modes.
+ */
 public class Matrix extends MultiDimObject {
     private final Value[][] values_;
+
+    /**
+     * Initializes a matrix with given dimensions and initialization settings.
+     *
+     * @param height The number of rows in the matrix.
+     * @param width The number of columns in the matrix.
+     * @param init_values The initialization method for the matrix elements.
+     */
     public Matrix(int height, int width, InitValues init_values) {
         if (height < 1 || width < 1) throw new RuntimeException("Matrix has non-positive dimensions");
         size_ = new int[] { height, width };
@@ -35,8 +41,7 @@ public class Matrix extends MultiDimObject {
             default -> throw new RuntimeException("Unknown sampler");
         };
 
-//        if (mode == ModelSettings.executionMode.PARALLEL) {
-        if (false) {
+        if (mode == ModelSettings.executionMode.PARALLEL) {
             IntStream.range(0, height).parallel().forEach(i -> {
                 IntStream.range(0, width).forEach(j -> {
                     values_[i][j] = new Value(sampler.next());
@@ -51,6 +56,12 @@ public class Matrix extends MultiDimObject {
         }
     }
 
+    /**
+     * Initializes a matrix from a 2D array of doubles. Each element in the array
+     * represents a matrix element.
+     *
+     * @param matrix The 2D array of doubles to initialize the matrix.
+     */
     public Matrix(double[][] matrix) {
         if (matrix.length == 0 || matrix[0].length == 0)
             throw new ArrayIndexOutOfBoundsException("Attempt to create matrix from the empty arrays");
@@ -62,6 +73,11 @@ public class Matrix extends MultiDimObject {
         }
     }
 
+    /**
+     * Initializes a matrix directly from a 2D array of {@link Value} objects.
+     *
+     * @param matrix The 2D array of {@link Value} objects to initialize the matrix.
+     */
     public Matrix(Value[][] matrix) {
         if (matrix == null) throw new RuntimeException("Array to create a matrix is null");
         if (matrix.length == 0 || matrix[0].length == 0)
@@ -70,6 +86,12 @@ public class Matrix extends MultiDimObject {
         size_ = new int[] { matrix.length, matrix[0].length };
     }
 
+    /**
+     * Sets the value at the specified indices in the matrix.
+     *
+     * @param value The value to set at the specified indices.
+     * @param indices The row and column indices where the value should be set.
+     */
     public void set(Value value, int... indices) {
         if (indices.length != 2) throw new RuntimeException("Insufficient number of indices to access the matrix");
         if (!index_is_valid(indices[0], size_[0]) && index_is_valid(indices[1], size_[1])) throw new ArrayIndexOutOfBoundsException("Invalid index to set");
@@ -77,22 +99,50 @@ public class Matrix extends MultiDimObject {
         values_[indices[0]][indices[1]] = value;
     }
 
+    /**
+     * Retrieves the value from the matrix at the specified indices.
+     *
+     * @param indices The row and column indices of the value to retrieve.
+     * @return The value at the specified indices.
+     */
     public Value get(int... indices) {
         if (indices.length != 2) throw new RuntimeException("Insufficient number of indices to access the matrix");
         if (!index_is_valid(indices[0], size_[0]) && index_is_valid(indices[1], size_[1])) throw new ArrayIndexOutOfBoundsException("Attempt to get matrix value that is out of bounds");
         return values_[indices[0]][indices[1]];
     }
 
+    /**
+     * Checks if the specified index is within the valid range of [0, comparison).
+     * This method is used internally to ensure that matrix access operations do not exceed
+     * the dimensions of the matrix, helping to prevent runtime errors due to invalid index access.
+     *
+     * @param index The index to check for validity.
+     * @param comparison The maximum allowable value for the index, exclusive. This is typically
+     *                   the size of the dimension being accessed.
+     * @return true if the index is within the valid range; false otherwise.
+     */
     private boolean index_is_valid(int index, int comparison) {
         return index >= 0 && index < comparison;
     }
 
+    /**
+     * Checks if another {@link MultiDimObject} has the same dimensions as this matrix.
+     *
+     * @param other The other {@link MultiDimObject} to compare against.
+     * @return true if the other object has the same dimensions; false otherwise.
+     */
     public boolean has_same_size(MultiDimObject other) {
         if (other == null) throw new NullPointerException("Comparison with the null matrix");
         int[] matrix_size = other.get_size();
         return matrix_size.length == size_.length && matrix_size[0] == size_[0] && matrix_size[1] == size_[1];
     }
 
+    /**
+     * Adds another matrix to this matrix.
+     *
+     * @param other The matrix to add to this one.
+     * @return A new matrix representing the sum of this matrix and the other matrix.
+     */
     public Matrix add(MultiDimObject other) {
         if (other == null) throw new NullPointerException("Attempt to add the null matrix");
         if (!has_same_size(other)) throw new RuntimeException("Matrix has invalid size for the addition");
@@ -107,50 +157,87 @@ public class Matrix extends MultiDimObject {
         return new Matrix(matrix_array);
     }
 
+    /**
+     * Applies the Rectified Linear Unit (ReLU) activation function to each element of the matrix.
+     * The ReLU function is defined as f(x) = max(0, x), setting all negative elements to zero,
+     * and keeping positive values unchanged.
+     *
+     * @return A new {@link Matrix} with the ReLU activation function applied to each element.
+     */
     public Matrix relu() {
-
-        if (mode == ModelSettings.executionMode.PARALLEL) {
-            Value[][] result = Arrays.stream(values_)
-                    .parallel() // Process rows in parallel
-                    .map(row -> Arrays.stream(row)
-                            .map(Value::relu) // Square each Value element
-                            .toArray(Value[]::new)) // Collect into a new row
-                    .toArray(Value[][]::new); // Collect into a new 2D array
-            return new Matrix(result);
-        }
-
-        var matrix_array = new Value[size_[0]][size_[1]];
-        for (int i = 0; i < size_[0]; ++i) {
-            for (int j = 0; j < size_[1]; ++j) {
-                matrix_array[i][j] = values_[i][j].relu();
-            }
-        }
-        return new Matrix(matrix_array);
+        return activation(Layer.Activation.ReLU);
     }
 
+    /**
+     * Applies the Leaky Rectified Linear Unit (LeakyReLU) activation function to each element of the matrix.
+     * The LeakyReLU function is defined as f(x) = x for x > 0, and f(x) = 0.01 * x for x less than 0.
+     * This allows a small, non-zero gradient when the unit is not active and prevents neurons from dying.
+     *
+     * @return A new {@link Matrix} with the LeakyReLU activation function applied to each element.
+     */
+    public Matrix leakyRelu() {
+        return activation(Layer.Activation.LeakyReLU);
+    }
+
+    /**
+     * Applies the Sigmoid activation function to each element of the matrix.
+     * The Sigmoid function is defined as f(x) = 1 / (1 + exp(-x)), which squashes each element
+     * to be between 0 and 1, making it suitable for models where we need to predict probabilities.
+     *
+     * @return A new {@link Matrix} with the Sigmoid activation function applied to each element.
+     */
     public Matrix sigmoid() {
+        return activation(Layer.Activation.Sigmoid);
+    }
+
+    /**
+     * Applies a specified activation function to each element of the matrix.
+     *
+     * @param activation The activation function name to apply.
+     * @return A new matrix with the activation function applied to each element.
+     */
+    protected Matrix activation(Layer.Activation activation) {
+        java.util.function.Function<Value, Value> activation_function = switch (activation) {
+            case ReLU -> Value::relu;
+            case LeakyReLU -> Value::leakyRelu;
+            case Sigmoid -> Value::sigmoid;
+            default -> throw new RuntimeException("Unknown activation function");
+        };
+
         if (mode == ModelSettings.executionMode.PARALLEL) {
             Value[][] result = Arrays.stream(values_)
-                    .parallel() // Process rows in parallel
+                    .parallel()
                     .map(row -> Arrays.stream(row)
-                            .map(Value::sigmoid) // Square each Value element
-                            .toArray(Value[]::new)) // Collect into a new row
-                    .toArray(Value[][]::new); // Collect into a new 2D array
+                            .map(activation_function)
+                            .toArray(Value[]::new))
+                    .toArray(Value[][]::new);
             return new Matrix(result);
         }
 
         var matrix_array = new Value[size_[0]][size_[1]];
         for (int i = 0; i < size_[0]; ++i) {
             for (int j = 0; j < size_[1]; ++j) {
-                matrix_array[i][j] = values_[i][j].sigmoid();
+                matrix_array[i][j] = activation_function.apply(values_[i][j]);
             }
         }
 
         return new Matrix(matrix_array);
     }
 
-    public boolean is_vector() { return size_[1] == 1; }
+    /**
+     * Determines if the matrix is a vector (i.e., 2nd dimension is 1).
+     *
+     * @return true if the matrix is a vector; false otherwise.
+     */
+    public boolean is_vector() {
+        return size_[1] == 1;
+    }
 
+    /**
+     * Transposes this matrix, switching its rows and columns.
+     *
+     * @return A new matrix that is the transpose of this matrix.
+     */
     public Matrix transpose() {
         var matrix_array = new Value[size_[1]][size_[0]];
         for (int i = 0; i < size_[1]; ++i) {
@@ -161,6 +248,11 @@ public class Matrix extends MultiDimObject {
         return new Matrix(matrix_array);
     }
 
+    /**
+     * Returns an iterator for the elements of the matrix.
+     *
+     * @return An iterator over the elements of the matrix.
+     */
     public Iterator<Value> iterator() {
         return new Iterator<Value>() {
             int current_index = 0;
@@ -179,16 +271,18 @@ public class Matrix extends MultiDimObject {
         };
     }
 
+    /**
+     * Multiplies this matrix by another matrix.
+     *
+     * @param other The matrix to multiply with this one.
+     * @return A new matrix representing the multiplication of this matrix and the other matrix.
+     */
     public Matrix multiply(MultiDimObject other) {
         if (other == null) throw new NullPointerException("Attempt to multiply by the null matrix");
         Matrix other_matrix = (Matrix)other;
         if (size_[1] != other_matrix.size_[0]) throw new NullPointerException("Matrices have incompatible sizes to multiply");
 
         if (mode == ModelSettings.executionMode.PARALLEL) {
-//            System.out.println("Is Parallel");
-//            var result = ParallelMatrixMultiplier.multiply(values_, other_matrix.values_);
-//            return new Matrix(result);
-
             var matrix_array = new Value[size_[0]][other_matrix.size_[1]];
             for (int i = 0; i < size_[0]; ++i) {
                 for (int j = 0; j < other_matrix.size_[1]; ++j) {
@@ -203,7 +297,6 @@ public class Matrix extends MultiDimObject {
         }
 
         var matrix_array = new Value[size_[0]][other_matrix.size_[1]];
-//        System.out.printf("[DEBUG] matrix size [%d, %d]\n", size_[0], size_[1]);
         for (int i = 0; i < size_[0]; ++i) {
             for (int j = 0; j < other_matrix.size_[1]; ++j) {
                 matrix_array[i][j] = new Value(0);
@@ -214,8 +307,11 @@ public class Matrix extends MultiDimObject {
         return new Matrix(matrix_array);
     }
 
+    /**
+     * Prints the matrix to the standard output.
+     */
     public void print() {
-        System.out.printf("size_ = [%d, %d]\n", size_[0], size_[1]);
+        System.out.printf("size_ = [%d, %d]", size_[0], size_[1]);
         for (int i = 0; i < size_[0]; ++i) {
             System.out.println();
             for (int j = 0; j < size_[1]; ++j) {
@@ -223,56 +319,5 @@ public class Matrix extends MultiDimObject {
             }
         }
         System.out.println();
-    }
-}
-
-class ParallelMatrixMultiplier extends RecursiveAction {
-        private final Value[][] result;
-        private final Value[][] matrix1;
-        private final Value[][] matrix2;
-        private final int startRow;
-        private final int endRow;
-        private static final int THRESHOLD = 1; // Adjust based on your system's performance
-
-        // Constructor for the task
-        public ParallelMatrixMultiplier(Value[][] result, Value[][] matrix1, Value[][] matrix2, int startRow, int endRow) {
-            this.result = result;
-            this.matrix1 = matrix1;
-            this.matrix2 = matrix2;
-            this.startRow = startRow;
-            this.endRow = endRow;
-        }
-
-        @Override
-        protected void compute() {
-//            Value[] current_column = new Value[matrix2.length];
-            if (endRow - startRow <= THRESHOLD) {
-                for (int row = startRow; row < endRow; row++) {
-                    for (int col = 0; col < matrix2[0].length; col++) {
-//                        result[row][col] = new Value(0);
-                        var values_array = new ArrayList<Value>();
-                        for (int i = 0; i < matrix1[row].length; i++) {
-//                            result[row][col] = result[row][col].add(matrix1[row][i].multiply(matrix2[i][col]));
-                            values_array.add(matrix1[row][i].multiply(matrix2[i][col]));
-                        }
-                        result[row][col] = Value.add(values_array);
-                    }
-                }
-            } else {
-                int mid = (startRow + endRow) / 2;
-                invokeAll(new ParallelMatrixMultiplier(result, matrix1, matrix2, startRow, mid),
-                        new ParallelMatrixMultiplier(result, matrix1, matrix2, mid, endRow));
-            }
-        }
-
-    public static Value[][] multiply(Value[][] matrix1, Value[][] matrix2) {
-        if (matrix1[0].length != matrix2.length) {
-            throw new IllegalArgumentException("Matrix dimensions do not match for multiplication.");
-        }
-
-        Value[][] result = new Value[matrix1.length][matrix2[0].length];
-        ForkJoinPool pool = ForkJoinPool.commonPool();
-        pool.invoke(new ParallelMatrixMultiplier(result, matrix1, matrix2, 0, matrix1.length));
-        return result;
     }
 }
