@@ -59,9 +59,7 @@ public class Value extends Differentiable {
         }
         new_value.prop_func_ = () -> {
             for (var current_parent: new_value.parents_) {
-                double new_gradient = Math.max(-gradient_clip_value, Math.min(new_value.gradient, gradient_clip_value));
-                current_parent.gradient += new_gradient;
-                current_parent.gradient = Math.max(-gradient_clip_value, Math.min(current_parent.gradient, gradient_clip_value));
+                current_parent.gradient += new_value.gradient;
             }
         };
         if (new_value.parents_.isEmpty()) new_value.requires_grad = false;
@@ -78,13 +76,8 @@ public class Value extends Differentiable {
         if (other == null) throw new NullPointerException("Attempt to add null value");
         var new_value = new Value(value + other.value);
         new_value.prop_func_ = () -> {
-            double new_gradient = Math.max(-gradient_clip_value, Math.min(new_value.gradient, gradient_clip_value));
-
-            gradient += new_gradient;
-            other.gradient += new_gradient;
-
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
-            other.gradient = Math.max(-gradient_clip_value, Math.min(other.gradient, gradient_clip_value));
+            gradient += new_value.gradient;
+            other.gradient += new_value.gradient;
         };
         if (requires_grad) new_value.parents_.add(this);
         if (other.requires_grad) new_value.parents_.add(other);
@@ -131,14 +124,8 @@ public class Value extends Differentiable {
         if (other == null) throw new NullPointerException("Attempt to multiply by null value");
         var new_value = new Value(value * other.value);
         new_value.prop_func_ = () -> {
-            double new_gradient = Math.max(-gradient_clip_value, Math.min(new_value.gradient * other.value, gradient_clip_value));
-            double new_gradient_other = Math.max(-gradient_clip_value, Math.min(new_value.gradient * value, gradient_clip_value));
-
-            gradient += new_gradient;
-            other.gradient += new_gradient_other;
-
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
-            other.gradient = Math.max(-gradient_clip_value, Math.min(other.gradient, gradient_clip_value));
+            gradient += new_value.gradient * other.value;
+            other.gradient += new_value.gradient * value;
         };
         if (requires_grad) new_value.parents_.add(this);
         if (other.requires_grad) new_value.parents_.add(other);
@@ -156,6 +143,63 @@ public class Value extends Differentiable {
     }
 
     /**
+     * Raises the value of this {@code Value} object to the power of the given exponent.
+     *
+     * This method computes the power of the current {@code value} using the provided exponent, creating a new
+     * {@code Value} object with the result. It also sets up the backpropagation function necessary for
+     * gradient computation during the training phase if {@code requires_grad} is true.
+     *
+     * If {@code requires_grad} is set to true, the current {@code Value} object is added as a parent of the
+     * new {@code Value} object to maintain the computation graph for gradient backpropagation.
+     *
+     * @param exponent the exponent to which the current value is to be raised
+     * @return a new {@code Value} object whose value is this object's {@code value} raised to the given exponent
+     * @throws IllegalArgumentException if the exponent causes the result to exceed numerical limits
+     */
+    public Value pow(double exponent) {
+        var new_value = new Value(Math.pow(value, exponent));
+
+        new_value.prop_func_ = () -> {
+            gradient += new_value.gradient * exponent * Math.pow(value, exponent - 1);
+        };
+        if (requires_grad) new_value.parents_.add(this);
+        new_value.requires_grad = requires_grad;
+        return new_value;
+    }
+
+    /**
+     * Divides this {@code Value} object by another {@code Value} object.
+     *
+     * This method performs division by using the reciprocal of the other {@code Value} object.
+     * It throws an exception if an attempt is made to divide by a null or zero value.
+     *
+     * @param other the {@code Value} object by which this object is to be divided
+     * @return a new {@code Value} object representing the quotient of this object divided by the provided {@code Value}
+     * @throws NullPointerException if the other {@code Value} object is null
+     * @throws RuntimeException if the other {@code Value}'s value is zero, preventing division
+     */
+    public Value div(Value other) {
+        if (other == null) throw new NullPointerException("Attempt to div by null value");
+        if (other.value == 0) throw new RuntimeException("Attempt to div by zero");
+        return multiply(other.pow(-1));
+    }
+
+    /**
+     * Divides this {@code Value} object by a constant.
+     *
+     * This method calculates the division of this object's value by the given constant using the reciprocal of that constant.
+     * It throws an exception if an attempt is made to divide by zero.
+     *
+     * @param constant the double value by which this {@code Value} object is to be divided
+     * @return a new {@code Value} object representing the quotient of this object's value divided by the given constant
+     * @throws RuntimeException if the constant is zero, as division by zero is undefined
+     */
+    public Value div(double constant) {
+        if (constant == 0) throw new RuntimeException("Attempt to div by zero");
+        return multiply((new Value(constant, false)).pow(-1));
+    }
+
+    /**
      * Applies the ReLU (Rectified Linear Unit) activation function to this value, supporting automatic differentiation.
      * ReLU function outputs the input itself if it is positive; otherwise, it outputs zero.
      * @return A new Value instance representing the result of the ReLU function.
@@ -163,10 +207,7 @@ public class Value extends Differentiable {
     public Value relu() {
         var new_value = new Value(value < 0 ? 0 : value);
         new_value.prop_func_ = () -> {
-            double new_gradient = new_value.gradient * (new_value.value > 0 ? 1 : 0);
-            new_gradient = Math.max(-gradient_clip_value, Math.min(new_gradient, gradient_clip_value));
-            gradient += new_gradient;
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            gradient += new_value.gradient * (new_value.value > 0 ? 1 : 0);
         };
         if (requires_grad) new_value.parents_.add(this);
         new_value.requires_grad = requires_grad;
@@ -181,10 +222,7 @@ public class Value extends Differentiable {
     public Value leakyRelu() {
         var new_value = new Value(value < 0 ? 0.01 * value : value);
         new_value.prop_func_ = () -> {
-            double new_gradient = new_value.gradient * (new_value.value > 0 ? 1 : 0.01);
-            new_gradient = Math.max(-gradient_clip_value, Math.min(new_gradient, gradient_clip_value));
-            gradient += new_gradient;
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            gradient += new_value.gradient * (new_value.value > 0 ? 1 : 0.01);
         };
         if (requires_grad) new_value.parents_.add(this);
         new_value.requires_grad = requires_grad;
@@ -200,10 +238,7 @@ public class Value extends Differentiable {
         var new_value = value == 0 ? new Value(Math.log(1e-15)) : new Value(Math.log(value)); // Math.log(1e-15) = -34.538776
 
         new_value.prop_func_ = () -> {
-            double new_gradient = value == 0 ? new_value.gradient / 1e-15 : new_value.gradient / value;
-            new_gradient = Math.max(-gradient_clip_value, Math.min(new_gradient, gradient_clip_value));
-            gradient += new_gradient;
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            gradient += value == 0 ? new_value.gradient / 1e-15 : new_value.gradient / value;
         };
         if (requires_grad) new_value.parents_.add(this);
         new_value.requires_grad = requires_grad;
@@ -218,10 +253,32 @@ public class Value extends Differentiable {
     public Value sigmoid() {
         var new_value = new Value(1 / (1 + Math.exp(-value)));
         new_value.prop_func_ = () -> {
-            double new_gradient = new_value.gradient * new_value.value * (1 - new_value.value);
-            new_gradient = Math.max(-gradient_clip_value, Math.min(new_gradient, gradient_clip_value));
-            gradient += new_gradient;
-            gradient = Math.max(-gradient_clip_value, Math.min(gradient, gradient_clip_value));
+            gradient += new_value.gradient * new_value.value * (1 - new_value.value);
+        };
+        if (requires_grad) new_value.parents_.add(this);
+        new_value.requires_grad = requires_grad;
+        return new_value;
+    }
+
+    /**
+     * Calculates the exponential of the current {@code Value} object.
+     *
+     * This method performs the exponential operation on the {@code value} field of the current {@code Value} object,
+     * creates a new {@code Value} object with the result, and sets up the backpropagation function for gradient
+     * computation if required.
+     *
+     * If {@code requires_grad} is {@code true} for the current object, the new {@code Value} object will have this object
+     * as its parent in the computation graph. This relationship is used to propagate gradients back to this object during
+     * the backpropagation phase of training.
+     *
+     * @return A new {@code Value} object whose value is set to the exponential of this object's {@code value}.
+     *         The returned object will have its gradient computation and backpropagation settings configured
+     *         based on the {@code requires_grad} status of the current object.
+     */
+    public Value exp() {
+        var new_value = new Value(Math.exp(value));
+        new_value.prop_func_ = () -> {
+            gradient += new_value.gradient * Math.exp(value);
         };
         if (requires_grad) new_value.parents_.add(this);
         new_value.requires_grad = requires_grad;
