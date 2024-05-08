@@ -1,10 +1,10 @@
-main.java
-main.java.autograd
-main.java.autograd.utils
-main.java.datasets
-main.java.mathematics
-main.java.mathematics.initializers
-main.java.nn.layers
-main.java.nn.losses
-main.java.nn.models
-main.java.optimizers
+unnamed package
+autograd
+autograd.utils
+datasets
+mathematics
+mathematics.initializers
+nn.layers
+nn.losses
+nn.models
+optimizers
